@@ -1,59 +1,55 @@
-"use client"
+'use client'
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { auth } from "@/lib/auth"
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { authClient } from "@/lib/auth-client"
+} from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { authClient } from '@/lib/auth-client'
 
 export function SignUpForm({
   className,
   ...props
-}: React.ComponentPropsWithoutRef<"div">) {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [error, setError] = useState("")
+}: React.ComponentPropsWithoutRef<'div'>) {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [error, setError] = useState('')
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const { data, error, on } = await authClient.signUp.email({
-      email: email,
-      password: password,
-      name: "test",
-      image: "https://example.com/image.png",
-      // callbackURL: "/dashboard"
-    },{
-      onSuccess: () => {
-        console.log("success")
-        router.push("/dashboard")
+    const { error } = await authClient.signUp.email(
+      {
+        email: email,
+        password: password,
+        name: 'test',
+        image: 'https://example.com/image.png',
+      },
+      {
+        onSuccess: () => {
+          console.log('success')
+          router.push('/dashboard')
+        },
+        onError: () => {
+          if (error?.message) {
+            setError(error?.message)
+          }
+        },
       }
-    }
-  );
-
-  }
-
-  const handleGoogleSignUp = async () => {
-    try {
-      await auth.emailAndPassword.signInWithGoogle()
-    } catch (err) {
-      setError("Une erreur est survenue lors de l'inscription avec Google")
-    }
+    )
   }
 
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
+    <div className={cn('flex flex-col gap-6', className)} {...props}>
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">Inscription</CardTitle>
@@ -80,22 +76,24 @@ export function SignUpForm({
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="password">Mot de passe</Label>
-                <Input 
-                  id="password" 
-                  type="password" 
-                  placeholder="********" 
-                  required 
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="********"
+                  required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="confirmPassword">Confirmer le mot de passe</Label>
-                <Input 
-                  id="confirmPassword" 
-                  type="password" 
-                  placeholder="********" 
-                  required 
+                <Label htmlFor="confirmPassword">
+                  Confirmer le mot de passe
+                </Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="********"
+                  required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                 />
@@ -108,17 +106,17 @@ export function SignUpForm({
                   Ou continuez avec
                 </span>
               </div>
-              <Button 
+              {/* <Button 
                 type="button"
                 variant="outline" 
                 className="w-full"
                 onClick={handleGoogleSignUp}
               >
                 S&apos;inscrire avec Google
-              </Button>
+              </Button> */}
             </div>
             <div className="mt-4 text-center text-sm">
-              Vous avez déjà un compte ?{" "}
+              Vous avez déjà un compte ?{' '}
               <a href="/sign-in" className="underline underline-offset-4">
                 Se connecter
               </a>
@@ -128,4 +126,4 @@ export function SignUpForm({
       </Card>
     </div>
   )
-} 
+}
