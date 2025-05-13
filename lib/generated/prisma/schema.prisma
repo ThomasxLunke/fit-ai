@@ -15,21 +15,23 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  name          String?
+  id            String    @id
+  name          String
+  email         String
   emailVerified Boolean
   image         String?
   createdAt     DateTime
   updatedAt     DateTime
+  onboarded     Boolean   @default(false)
   sessions      Session[]
   accounts      Account[]
 
+  @@unique([email])
   @@map("user")
 }
 
 model Session {
-  id        String   @id @default(uuid())
+  id        String   @id
   expiresAt DateTime
   token     String
   createdAt DateTime
@@ -44,7 +46,7 @@ model Session {
 }
 
 model Account {
-  id                    String    @id @default(uuid())
+  id                    String    @id
   accountId             String
   providerId            String
   userId                String
@@ -63,7 +65,7 @@ model Account {
 }
 
 model Verification {
-  id         String    @id @default(uuid())
+  id         String    @id
   identifier String
   value      String
   expiresAt  DateTime
