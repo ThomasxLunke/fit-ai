@@ -5,6 +5,12 @@ import { z } from 'zod'
 import { Button } from './ui/button'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
+import { Input } from './ui/input'
+import { Check } from 'lucide-react'
+import { updateUser } from '@/lib/api'
+import { getUserBySessionAuth } from '@/app/actions'
+import { useRouter } from 'next/navigation'
+import { generateProgram } from '@/lib/ai'
 
 const formSchema = z.object({
   sessionPerWeek: z.number().min(1).max(7),
@@ -19,50 +25,66 @@ const formSchema = z.object({
   ]),
 })
 
+export type OnBoardingSchema = z.infer<typeof formSchema>
+
 export default function OnboardingForm() {
   const steps = [
     {
-      name: 'Session per week',
-      description: 'How many sessions per week do you want to do?',
+      name: 'Nombre de sessions par semaine',
+      description: 'Combien de sessions par semaine voulez-vous faire ?',
       field: ['sessionPerWeek'],
     },
     {
-      name: 'Day available',
-      description: 'What days of the week are you available?',
+      name: 'Jours disponibles',
+      description: 'Quels jours de la semaine êtes-vous disponibles ?',
       field: ['dayAvailable'],
     },
     {
-      name: 'Objective',
-      description: 'What is your objective?',
+      name: 'Objectif',
+      description: 'Quel est votre objectif ?',
       field: ['objective'],
     },
     {
-      name: 'Program preferences',
-      description: 'What is your program preferences?',
+      name: 'Préférences de programmation',
+      description: 'Quelles sont vos préférences de programmation ?',
       field: ['programPreferences'],
     },
     {
-      name: 'Onboarding complete',
-      description: 'Your onboarding is complete',
+      name: 'Onboarding terminé',
+      description: 'Votre onboarding est terminé',
       field: [],
     },
   ]
 
   const [currentStep, setCurrentStep] = useState(0)
+  const router = useRouter()
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      sessionPerWeek: 0,
+      sessionPerWeek: 1,
       dayAvailable: [],
       objective: undefined,
       programPreferences: undefined,
     },
   })
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const { setValue } = form
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    setCurrentStep(currentStep + 1)
+
+    const user = await getUserBySessionAuth()
+    const updated = await updateUser(user.id, {
+      ...user,
+      onboarded: true,
+    })
+    console.log(updated)
+    if (updated) {
+      // router.push('/dashboard')
+      const program = await generateProgram(form.getValues())
+      console.log(program)
+    }
   }
 
   const objectives = [
@@ -79,6 +101,16 @@ export default function OnboardingForm() {
     { value: 'none', label: 'Aucune préférence' },
   ]
 
+  const days = [
+    { value: 1, label: 'Lundi' },
+    { value: 2, label: 'Mardi' },
+    { value: 3, label: 'Mercredi' },
+    { value: 4, label: 'Jeudi' },
+    { value: 5, label: 'Vendredi' },
+    { value: 6, label: 'Samedi' },
+    { value: 7, label: 'Dimanche' },
+  ]
+
   return (
     <div className="h-full w-full flex justify-center items-center">
       <div className="w-[600px] h-[500px] border rounded-lg p-4">
@@ -86,23 +118,74 @@ export default function OnboardingForm() {
           className="w-full h-full flex flex-col justify-between"
           onSubmit={handleSubmit}
         >
-          <div className="flex flex-col justify-between">
+          <div className="h-full flex flex-col justify-between">
             {currentStep === 0 && (
-              <div>
-                <h1>{steps[currentStep].name}</h1>
-                <p>{steps[currentStep].description}</p>
+              <div className="flex flex-col gap-4">
+                <div>
+                  <h1 className="text-3xl font-bold tracking-tight">
+                    {steps[currentStep].name}
+                  </h1>
+                  <p className="text-base text-muted-foreground">
+                    {steps[currentStep].description}
+                  </p>
+                </div>
+                <div className="flex flex-col gap-4">
+                  <Input
+                    type="number"
+                    placeholder="Nombre de sessions par semaine"
+                    {...form.register('sessionPerWeek')}
+                  />
+                </div>
               </div>
             )}
             {currentStep === 1 && (
-              <div>
-                <h1>{steps[currentStep].name}</h1>
-                <p>{steps[currentStep].description}</p>
+              <div className="flex flex-col gap-4">
+                <div>
+                  <h1 className="text-3xl font-bold tracking-tight">
+                    {steps[currentStep].name}
+                  </h1>
+                  <p className="text-base text-muted-foreground">
+                    {steps[currentStep].description}
+                  </p>
+                </div>
+                <div className="flex flex-col gap-4 flex-wrap">
+                  {days.map((day) => (
+                    <Button
+                      key={day.value}
+                      type="button"
+                      variant={
+                        form.watch('dayAvailable').includes(day.value)
+                          ? 'default'
+                          : 'outline'
+                      }
+                      onClick={() =>
+                        setValue(
+                          'dayAvailable',
+                          form.watch('dayAvailable').includes(day.value)
+                            ? form
+                                .watch('dayAvailable')
+                                .filter((d) => d !== day.value)
+                            : [...form.watch('dayAvailable'), day.value]
+                        )
+                      }
+                    >
+                      {day.label}
+                    </Button>
+                  ))}
+                </div>
               </div>
             )}
             {currentStep === 2 && (
-              <div className="space-y-4">
-                <h1>{steps[currentStep].name}</h1>
-                <p>{steps[currentStep].description}</p>
+              <div className="flex flex-col gap-4">
+                <div>
+                  <h1 className="text-3xl font-bold tracking-tight">
+                    {steps[currentStep].name}
+                  </h1>
+                  <p className="text-base text-muted-foreground">
+                    {steps[currentStep].description}
+                  </p>
+                </div>
+
                 <div className="grid grid-cols-1 gap-4">
                   {objectives.map((obj) => (
                     <Button
@@ -128,9 +211,15 @@ export default function OnboardingForm() {
               </div>
             )}
             {currentStep === 3 && (
-              <div className="space-y-4">
-                <h1>{steps[currentStep].name}</h1>
-                <p>{steps[currentStep].description}</p>
+              <div className="flex flex-col gap-4">
+                <div>
+                  <h1 className="text-3xl font-bold tracking-tight">
+                    {steps[currentStep].name}
+                  </h1>
+                  <p className="text-base text-muted-foreground">
+                    {steps[currentStep].description}
+                  </p>
+                </div>
                 <div className="grid grid-cols-1 gap-4">
                   {programs.map((prog) => (
                     <Button
@@ -161,31 +250,46 @@ export default function OnboardingForm() {
               </div>
             )}
             {currentStep === 4 && (
-              <div>
-                <h1>{steps[currentStep].name}</h1>
-                <p>{steps[currentStep].description}</p>
+              <div className="h-full flex flex-col justify-between">
+                <div>
+                  <h1 className="text-3xl font-bold tracking-tight">
+                    {steps[currentStep].name}
+                  </h1>
+                  <p className="text-base text-muted-foreground">
+                    {steps[currentStep].description}
+                  </p>
+                </div>
+                <Button type="submit">
+                  <Check />
+                  Valider
+                </Button>
               </div>
             )}
           </div>
-          <div className="flex justify-between">
-            <Button
-              disabled={currentStep === 0}
-              type="button"
-              onClick={() => setCurrentStep(currentStep - 1)}
-            >
-              Précédent
-            </Button>
-            <Button
-              disabled={
-                currentStep === steps.length - 1 ||
-                (currentStep === 2 && !form.watch('objective')) ||
-                (currentStep === 3 && !form.watch('programPreferences'))
-              }
-              type="submit"
-            >
-              Suivant
-            </Button>
-          </div>
+          {currentStep !== 4 && (
+            <div className="flex justify-between">
+              <Button
+                disabled={currentStep === 0}
+                type="button"
+                onClick={() => setCurrentStep(currentStep - 1)}
+              >
+                Précédent
+              </Button>
+              <Button
+                disabled={
+                  currentStep === steps.length - 1 ||
+                  (currentStep === 1 &&
+                    form.watch('dayAvailable').length === 0) ||
+                  (currentStep === 2 && !form.watch('objective')) ||
+                  (currentStep === 3 && !form.watch('programPreferences'))
+                }
+                type="button"
+                onClick={() => setCurrentStep(currentStep + 1)}
+              >
+                Suivant
+              </Button>
+            </div>
+          )}
         </form>
       </div>
     </div>

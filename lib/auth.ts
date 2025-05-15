@@ -24,7 +24,7 @@ export const auth = betterAuth({
   },
 })
 
-export const getUserByAuthId = async () => {
+export const getUserBySessionAuth = async () => {
   const session = await auth.api.getSession({
     headers: await headers(),
   })
