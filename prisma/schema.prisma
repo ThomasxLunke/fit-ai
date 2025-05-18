@@ -36,7 +36,18 @@ model Program {
   description String
   createdAt DateTime
   updatedAt DateTime
+  trainingSessions TrainingSession[]
+}
+
+model TrainingSession {
+  id String @id
+  name String
+  description String
+  createdAt DateTime
+  updatedAt DateTime
   exercises Exercise[]
+  programId String
+  program Program @relation(fields: [programId], references: [id], onDelete: Cascade)
 }
 
 model Exercise {
@@ -51,8 +62,8 @@ model Exercise {
   createdAt DateTime
   updatedAt DateTime
 
-  programId String
-  program Program @relation(fields: [programId], references: [id], onDelete: Cascade)
+  trainingSessionId String
+  session TrainingSession @relation(fields: [trainingSessionId], references: [id], onDelete: Cascade)
 }
 
 model Session {

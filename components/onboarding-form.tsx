@@ -75,16 +75,17 @@ export default function OnboardingForm() {
     e.preventDefault()
 
     const user = await getUserBySessionAuth()
-    const updated = await updateUser(user.id, {
-      ...user,
-      onboarded: true,
-    })
-    console.log(updated)
-    if (updated) {
-      // router.push('/dashboard')
-      const program = await generateProgram(form.getValues())
-      console.log(program)
-    }
+    // const updated = await updateUser(user.id, {
+    //   ...user,
+    //   onboarded: true,
+    // })
+    // console.log(updated)
+    // if (updated) {
+    // router.push('/dashboard')
+    console.log(form.getValues())
+    const program = await generateProgram(form.getValues())
+    console.log(program)
+    // }
   }
 
   const objectives = [
