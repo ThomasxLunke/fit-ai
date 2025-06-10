@@ -33,6 +33,7 @@ export function SignUpForm({
         password: password,
         name: 'test',
         image: 'https://example.com/image.png',
+        onboarded: false,
       },
       {
         onSuccess: () => {

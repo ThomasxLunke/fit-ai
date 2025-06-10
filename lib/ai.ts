@@ -27,9 +27,16 @@ const schemaProgram = z.object({
   trainingSessions: z.array(schemaTrainingSession),
 })
 
-const queryVectorStore = async () => {
+interface VectorStoreFile {
+  id: string
+  content: string
+}
+
+export const queryVectorStore = async () => {
+  const files: VectorStoreFile[] = []
+
   const res = await fetch(
-    `https://api.openai.com/v1/vector_stores/${process.env.VECTOR_STORE_ID}`,
+    `https://api.openai.com/v1/vector_stores/${process.env.VECTOR_STORE_ID}/files`,
     {
       method: 'GET',
       headers: {
@@ -39,13 +46,34 @@ const queryVectorStore = async () => {
     }
   )
 
-  const json = await res.json()
-  const texts = json?.data?.map((d: any) => d.document.text) ?? []
-  return texts.join('\n\n')
+  const resJson = await res.json()
+
+  if (resJson.data) {
+    await Promise.all(
+      resJson.data.map(async (file: VectorStoreFile) => {
+        const res = await fetch(
+          `https://api.openai.com/v1/vector_stores/${process.env.VECTOR_STORE_ID}/files/${file.id}/content`,
+          {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        )
+        const json = await res.json()
+        files.push(json.data)
+      })
+    )
+  }
+
+  console.log('files = ', files)
+  return files
 }
 
 export const generateProgram = async (onBoarding: OnBoardingSchema) => {
-  const context = await queryVectorStore()
+  // const context = await queryVectorStore()
+  // console.log('context = ', context)
 
   const promptTemplate = PromptTemplate.fromTemplate(
     `
@@ -56,7 +84,6 @@ Voici les données morphoanatomiques de l'utilisateur :
 - Longueur jambe : {legLength}
 - Rapport fémur/tibia : {femurToTibia}
 - Rapport humérus/radius : {humerusToRadius}
-- Autres particularités morphologiques : {otherMorphoDetails}
 
 Objectif de l'utilisateur : {objective} son poids.
 
@@ -65,13 +92,10 @@ Nombre de séances par semaine : {sessionPerWeek}
 
 Préférences de l'utilisateur pour la programmation : {programPreferences}
 
-Voici un contexte extrait d’ouvrages spécialisés :
+Voici un contexte extrait d'ouvrages spécialisés :
 {context}
 
-Respecte strictement le schéma suivant :
-→ programme {{ name, description, trainingSessions: [ {{ name, description, day, exercises: [ {{ name, description, sets, reps, weight }} ] }} ] }}
-
-N'utilise aucun exercice qui ne conviendrait pas à la morphologie indiquée. Sois concis mais exhaustif dans les descriptions des mouvements.
+N'utilise aucun exercice qui ne conviendrait pas à la morphologie indiquée. Sois concis mais exhaustif dans les descriptions des mouvements. Respecte strictement le nombre de séances par semaine indiqué. Afin de justifier les choix d'exercices choisis, appuie toi sur le contexte extrait d'ouvrages spécialisés, et fournis des explications sur les raisons de ces choix dans la description de l'exercice.
   `
   )
 
@@ -84,13 +108,11 @@ N'utilise aucun exercice qui ne conviendrait pas à la morphologie indiquée. So
     legLength: 90, // en cm, jambes longues
     femurToTibia: 1.3, // fémur plus long que tibia
     humerusToRadius: 1.2, // humérus légèrement plus long que radius
-    otherMorphoDetails:
-      'Épaules larges, cage thoracique étroite, avant-bras courts',
-    context,
+    context: '',
   })
 
   const model = new ChatOpenAI({
-    model: 'gpt-4o',
+    model: 'gpt-4o-mini',
     temperature: 0,
   }).withStructuredOutput(schemaProgram)
 

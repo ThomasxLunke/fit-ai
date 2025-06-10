@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { z } from 'zod'
 import { Button } from './ui/button'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -11,6 +11,12 @@ import { updateUser } from '@/lib/api'
 import { getUserBySessionAuth } from '@/app/actions'
 import { useRouter } from 'next/navigation'
 import { generateProgram } from '@/lib/ai'
+import { startWebcam } from '@/lib/webcam'
+import Webcam from 'react-webcam'
+import * as bodyPix from '@tensorflow-models/body-pix'
+import '@tensorflow/tfjs-core'
+import '@tensorflow/tfjs-backend-webgl'
+import '@mediapipe/selfie_segmentation'
 
 const formSchema = z.object({
   sessionPerWeek: z.number().min(1).max(7),
@@ -23,6 +29,9 @@ const formSchema = z.object({
     'split',
     'none',
   ]),
+  humerusToRadius: z.number().min(0).max(2),
+  femurToTibia: z.number().min(0).max(2),
+  torsoToLegs: z.number().min(0).max(2),
 })
 
 export type OnBoardingSchema = z.infer<typeof formSchema>
@@ -50,6 +59,21 @@ export default function OnboardingForm() {
       field: ['programPreferences'],
     },
     {
+      name: 'Mesure du bras',
+      description: 'Quelle est la mesure de votre bras ?',
+      field: ['humerusToRadius'],
+    },
+    {
+      name: 'Mesure de la cuisse',
+      description: 'Quelle est la mesure de votre cuisse ?',
+      field: ['femurToTibia'],
+    },
+    {
+      name: 'Mesure de la longueur du torse',
+      description: 'Quelle est la mesure de votre longueur du torse ?',
+      field: ['torsoToLegs'],
+    },
+    {
       name: 'Onboarding terminé',
       description: 'Votre onboarding est terminé',
       field: [],
@@ -58,6 +82,86 @@ export default function OnboardingForm() {
 
   const [currentStep, setCurrentStep] = useState(0)
   const router = useRouter()
+  const webcamRef = useRef<Webcam>(null)
+  const canvasRef = useRef<Canvas>(null)
+
+  const runBodysegment = async () => {
+    const model = await bodyPix.load()
+
+    setInterval(() => {
+      detect(model)
+    }, 100)
+  }
+
+  const detect = async (model) => {
+    // Check data is available
+    console.log('yaaaa')
+    if (
+      typeof webcamRef.current !== 'undefined' &&
+      webcamRef.current !== null &&
+      webcamRef.current.video?.readyState === 4 &&
+      canvasRef.current
+    ) {
+      // Get Video Properties
+      const video = webcamRef.current.video
+      const videoWidth = webcamRef.current.video.videoWidth
+      const videoHeight = webcamRef.current.video.videoHeight
+
+      // Set video width
+      webcamRef.current.video.width = videoWidth
+      webcamRef.current.video.height = videoHeight
+
+      // Set canvas height and width
+      canvasRef.current.width = videoWidth
+      canvasRef.current.height = videoHeight
+
+      // Make Detections
+      // * One of (see documentation below):
+      // *   - net.segmentPerson
+      // *   - net.segmentPersonParts
+      // *   - net.segmentMultiPerson
+      // *   - net.segmentMultiPersonParts
+      // const person = await net.segmentPerson(video);
+      const partSegmentation = await model.segmentPersonParts(video, {
+        flipHorizontal: false,
+        internalResolution: 'medium',
+        segmentationThreshold: 0.7,
+        maxDetections: 10,
+        scoreThreshold: 0.2,
+        nmsRadius: 20,
+        minKeypointScore: 0.3,
+        refineSteps: 10,
+      })
+
+      if (model) {
+        console.log(partSegmentation?.allPoses[0]?.keypoints)
+
+        // partSegmentation?.allPoses[0]?.keypoints.map((pos) => {
+        //   canvasRef.current
+        // })
+        // if (partSegmentation)
+        const coloredPartImage = bodyPix.toColoredPartMask(partSegmentation)
+        const opacity = 0.7
+        const flipHorizontal = false
+        const maskBlurAmount = 0
+        const pixelCellWidth = 10.0
+        const canvas = canvasRef.current
+        bodyPix.drawPixelatedMask(
+          canvas,
+          video,
+          coloredPartImage,
+          opacity,
+          maskBlurAmount,
+          flipHorizontal,
+          pixelCellWidth
+        )
+      }
+    }
+  }
+
+  useEffect(() => {
+    if (currentStep === 4) runBodysegment()
+  }, [currentStep])
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -66,6 +170,9 @@ export default function OnboardingForm() {
       dayAvailable: [],
       objective: undefined,
       programPreferences: undefined,
+      humerusToRadius: 0,
+      femurToTibia: 0,
+      torsoToLegs: 0,
     },
   })
 
@@ -250,7 +357,38 @@ export default function OnboardingForm() {
                 </div>
               </div>
             )}
-            {currentStep === 4 && (
+            {[4, 5, 6].includes(currentStep) && (
+              <div className="flex flex-col gap-4">
+                <h1 className="text-3xl font-bold tracking-tight">
+                  {steps[currentStep].name}
+                </h1>
+                <p className="text-base text-muted-foreground">
+                  {steps[currentStep].description}
+                </p>
+                <div className="flex w-full h-fit flex-col justify-center items-center">
+                  <Webcam
+                    id="webcam"
+                    ref={webcamRef}
+                    style={{
+                      width: 320,
+                      height: 240,
+                      position: 'relative',
+                    }}
+                  />
+                  <canvas
+                    ref={canvasRef}
+                    style={{
+                      width: 320,
+                      height: 240,
+                      position: 'absolute',
+                      top: '35%',
+                      bottom: '50%',
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+            {currentStep === 7 && (
               <div className="h-full flex flex-col justify-between">
                 <div>
                   <h1 className="text-3xl font-bold tracking-tight">
@@ -260,14 +398,23 @@ export default function OnboardingForm() {
                     {steps[currentStep].description}
                   </p>
                 </div>
-                <Button type="submit">
-                  <Check />
-                  Valider
-                </Button>
+                <div className="flex justify-between">
+                  <Button
+                    type="button"
+                    onClick={() => setCurrentStep(currentStep - 1)}
+                  >
+                    Précédent
+                  </Button>
+                  <Button type="submit">
+                    <Check />
+                    Valider
+                  </Button>
+                </div>
               </div>
             )}
           </div>
-          {currentStep !== 4 && (
+
+          {currentStep !== 7 && (
             <div className="flex justify-between">
               <Button
                 disabled={currentStep === 0}
