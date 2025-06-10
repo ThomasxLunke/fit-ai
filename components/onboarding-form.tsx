@@ -17,6 +17,8 @@ import * as bodyPix from '@tensorflow-models/body-pix'
 import '@tensorflow/tfjs-core'
 import '@tensorflow/tfjs-backend-webgl'
 import '@mediapipe/selfie_segmentation'
+import { getDistance } from '@/lib/utils'
+import { Keypoint } from '@tensorflow-models/body-pix/dist/types'
 
 const formSchema = z.object({
   sessionPerWeek: z.number().min(1).max(7),
@@ -83,19 +85,10 @@ export default function OnboardingForm() {
   const [currentStep, setCurrentStep] = useState(0)
   const router = useRouter()
   const webcamRef = useRef<Webcam>(null)
-  const canvasRef = useRef<Canvas>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [measurementArm, setMeasurementArm] = useState<number[]>([])
 
-  const runBodysegment = async () => {
-    const model = await bodyPix.load()
-
-    setInterval(() => {
-      detect(model)
-    }, 100)
-  }
-
-  const detect = async (model) => {
-    // Check data is available
-    console.log('yaaaa')
+  const detect = async (model: bodyPix.BodyPix) => {
     if (
       typeof webcamRef.current !== 'undefined' &&
       webcamRef.current !== null &&
@@ -107,60 +100,118 @@ export default function OnboardingForm() {
       const videoWidth = webcamRef.current.video.videoWidth
       const videoHeight = webcamRef.current.video.videoHeight
 
-      // Set video width
       webcamRef.current.video.width = videoWidth
       webcamRef.current.video.height = videoHeight
 
-      // Set canvas height and width
       canvasRef.current.width = videoWidth
       canvasRef.current.height = videoHeight
 
-      // Make Detections
-      // * One of (see documentation below):
-      // *   - net.segmentPerson
-      // *   - net.segmentPersonParts
-      // *   - net.segmentMultiPerson
-      // *   - net.segmentMultiPersonParts
-      // const person = await net.segmentPerson(video);
       const partSegmentation = await model.segmentPersonParts(video, {
         flipHorizontal: false,
         internalResolution: 'medium',
-        segmentationThreshold: 0.7,
-        maxDetections: 10,
-        scoreThreshold: 0.2,
-        nmsRadius: 20,
-        minKeypointScore: 0.3,
-        refineSteps: 10,
+        segmentationThreshold: 0.8,
       })
 
-      if (model) {
-        console.log(partSegmentation?.allPoses[0]?.keypoints)
+      const canvas = canvasRef.current
 
-        // partSegmentation?.allPoses[0]?.keypoints.map((pos) => {
-        //   canvasRef.current
-        // })
-        // if (partSegmentation)
-        const coloredPartImage = bodyPix.toColoredPartMask(partSegmentation)
-        const opacity = 0.7
-        const flipHorizontal = false
-        const maskBlurAmount = 0
-        const pixelCellWidth = 10.0
-        const canvas = canvasRef.current
-        bodyPix.drawPixelatedMask(
-          canvas,
-          video,
-          coloredPartImage,
-          opacity,
-          maskBlurAmount,
-          flipHorizontal,
-          pixelCellWidth
-        )
+      if (model && canvas) {
+        // console.log(partSegmentation?.allPoses[0]?.keypoints)
+        const ctx = canvas.getContext('2d')
+        if (ctx)
+          partSegmentation?.allPoses[0]?.keypoints.map((pos) => {
+            ctx.fillStyle = 'red'
+            ctx.fillRect(pos.position.x, pos.position.y, 5, 5)
+          })
+        if (partSegmentation?.allPoses[0]?.keypoints) {
+          const keypoints = partSegmentation.allPoses[0].keypoints
+          const parts = keypoints.map((key) => {
+            return key.part
+          })
+
+          if (
+            ['leftShoulder', 'leftElbow', 'leftWrist'].every((v) =>
+              parts.includes(v)
+            )
+          ) {
+            const leftShoulder = keypoints.find(
+              (k) => k.part === 'leftShoulder'
+            )
+            const leftElbow = keypoints.find((k) => k.part === 'leftElbow')
+            const leftWrist = keypoints.find((k) => k.part === 'leftWrist')
+
+            if (
+              leftShoulder!.score > 0.9 &&
+              leftElbow!.score > 0.9 &&
+              leftWrist!.score > 0.9
+            ) {
+              const firstDistance = getDistance(
+                leftShoulder!.position.x,
+                leftShoulder!.position.y,
+                leftElbow!.position.x,
+                leftElbow!.position.y
+              )
+              //  27 / 25 = 1.08
+              //
+
+              const secondDistance = getDistance(
+                leftWrist!.position.x,
+                leftWrist!.position.y,
+                leftElbow!.position.x,
+                leftElbow!.position.y
+              )
+              // console.log('firstDistance = ', firstDistance)
+              // console.log('secondDistance = ', secondDistance)
+              // measurementArm.push(firstDistance / secondDistance)
+              // console.log(measurementArm)
+
+              return firstDistance / secondDistance
+              // console.log('distance = ', firstDistance / secondDistance)
+            }
+
+            // TODO : Il faut que je prenne 1000 mesures, je fais une moyenne puis je set le rapport (indiquer au user qu'il ne doit pas bouger pendant la mesure)
+          }
+        }
       }
     }
+    return 0
   }
 
   useEffect(() => {
-    if (currentStep === 4) runBodysegment()
+    console.log(measurementArm)
+  }, [measurementArm])
+
+  const intervalIdRef = useRef<NodeJS.Timeout | null>(null)
+  const modelRef = useRef<bodyPix.BodyPix | null>(null)
+
+  const loadModel = async () => {
+    if (!modelRef.current) {
+      modelRef.current = await bodyPix.load()
+      console.log('Model loaded')
+    } else {
+      console.log('Model already loaded')
+    }
+  }
+
+  const runBodysegment = async () => {
+    await loadModel()
+    intervalIdRef.current = setInterval(async () => {
+      if (modelRef.current) {
+        const res = await detect(modelRef.current)
+        console.log(res)
+        const copy = measurementArm
+        setMeasurementArm([...copy, res])
+      }
+    }, 10)
+  }
+  useEffect(() => {
+    if (currentStep === 4 && webcamRef.current && canvasRef.current) {
+      runBodysegment()
+    } else {
+      if (intervalIdRef.current) {
+        clearInterval(intervalIdRef.current)
+        intervalIdRef.current = null
+      }
+    }
   }, [currentStep])
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -365,6 +416,12 @@ export default function OnboardingForm() {
                 <p className="text-base text-muted-foreground">
                   {steps[currentStep].description}
                 </p>
+                {currentStep === 4 && (
+                  <p className="text-green-500 text-base">
+                    {measurementArm.length} / 1000
+                  </p>
+                )}
+
                 <div className="flex w-full h-fit flex-col justify-center items-center">
                   <Webcam
                     id="webcam"

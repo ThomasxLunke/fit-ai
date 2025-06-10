@@ -9,6 +9,8 @@ export const getUserBySessionAuth = async () => {
     headers: await headers(),
   })
 
+  console.log('session = ', session)
+
   const user = await prisma.user.findUniqueOrThrow({
     where: {
       id: session?.user.id,
