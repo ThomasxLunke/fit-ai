@@ -12,6 +12,14 @@ const schemaExercise = z.object({
   sets: z.number(),
   reps: z.number(),
   weight: z.number(),
+  justification: z.object({
+    reason: z.string(),
+    source: z.object({
+      book: z.string(),
+      page: z.number(),
+      excerpt: z.string(),
+    }),
+  }),
 })
 
 const schemaTrainingSession = z.object({
@@ -21,12 +29,11 @@ const schemaTrainingSession = z.object({
   exercises: z.array(schemaExercise),
 })
 
-const schemaProgram = z.object({
+export const schemaProgram = z.object({
   name: z.string(),
   description: z.string(),
   trainingSessions: z.array(schemaTrainingSession),
 })
-
 interface VectorStoreFile {
   id: string
   content: string
@@ -66,49 +73,63 @@ export const queryVectorStore = async () => {
       })
     )
   }
-
-  console.log('files = ', files)
   return files
 }
 
 export const generateProgram = async (onBoarding: OnBoardingSchema) => {
-  // const context = await queryVectorStore()
+  const context = await queryVectorStore()
   // console.log('context = ', context)
-
-  const promptTemplate = PromptTemplate.fromTemplate(
-    `
-Tu es un coach expert en biomécanique, morphoanatomie et optimisation des leviers articulaires.
-
-Voici les données morphoanatomiques de l'utilisateur :
-- Longueur buste : {torsoLength}
-- Longueur jambe : {legLength}
-- Rapport fémur/tibia : {femurToTibia}
-- Rapport humérus/radius : {humerusToRadius}
-
-Objectif de l'utilisateur : {objective} son poids.
-
-Jours d'entraînement disponibles : {dayAvailable}
-Nombre de séances par semaine : {sessionPerWeek}
-
-Préférences de l'utilisateur pour la programmation : {programPreferences}
-
-Voici un contexte extrait d'ouvrages spécialisés :
-{context}
-
-N'utilise aucun exercice qui ne conviendrait pas à la morphologie indiquée. Sois concis mais exhaustif dans les descriptions des mouvements. Respecte strictement le nombre de séances par semaine indiqué. Afin de justifier les choix d'exercices choisis, appuie toi sur le contexte extrait d'ouvrages spécialisés, et fournis des explications sur les raisons de ces choix dans la description de l'exercice.
-  `
-  )
+  const flattenedContext = context.flat() // retire le niveau inutile
+  const contextText = flattenedContext.map((file) => file.text).join('\n\n')
+  // console.log('contextText = ', contextText)
+  // console.log(onBoarding)
+  const promptTemplate = PromptTemplate.fromTemplate(`
+    Tu es un coach expert en biomécanique, morphoanatomie et optimisation des leviers articulaires, t'appuyant exclusivement sur les ouvrages de référence "Méthode Delavier" de Frédéric Delavier et Michael Gundill.
+    
+    Voici les données morphoanatomiques de l'utilisateur :
+    - Rapport buste/jambe : {torsoLegRatio}
+    - Rapport épaule/coude/coude/poignet : {shoulderElbowToElbowWristRatio}
+    
+    Objectif de l'utilisateur : {objective} son poids.
+    Jours d'entraînement disponibles : {dayAvailable}
+    Nombre de séances par semaine : {sessionPerWeek}
+    Préférences de l'utilisateur pour la programmation : {programPreferences}
+    
+    ⚠️ Tu dois absolument générer exactement {sessionPerWeek} séances distinctes (Push, Pull, Legs), chacune correspondant à un des jours disponibles ({dayAvailable}).
+    ⚠️ Ne jamais générer moins ou plus de séances.
+    
+    Voici un contexte extrait d'ouvrages spécialisés :
+    {context}
+    
+    Ta mission :
+    1. Proposer un programme complet de {sessionPerWeek} séances par semaine en respectant les jours disponibles ({dayAvailable}).
+    2. Chaque séance doit inclure :
+       - Un nom clair
+       - Le jour choisi (issu de {dayAvailable})
+       - Une description concise
+    3. Chaque exercice doit obligatoirement inclure :
+       - Nom
+       - Description
+       - Séries
+       - Répétitions
+       - Poids (0 si inconnu)
+       - Justification morphoanatomique issue du contexte ci-dessus uniquement
+       - Source exacte : Livre, page, extrait cité
+    
+    ⚠️ Tu n'as pas le droit d'inventer des justifications ou des sources qui ne figurent pas dans le contexte fourni.
+    ⚠️ Si aucune justification valide n'est trouvée dans le contexte, supprime cet exercice.
+    
+    Rappel : sois concis mais précis. Ne dépasse jamais le cadre morphoanatomique des ouvrages cités.
+    `)
 
   const prompt = await promptTemplate.format({
     sessionPerWeek: onBoarding.sessionPerWeek,
     dayAvailable: onBoarding.dayAvailable,
     objective: onBoarding.objective,
     programPreferences: onBoarding.programPreferences,
-    torsoLength: 55, // en cm, buste court
-    legLength: 90, // en cm, jambes longues
-    femurToTibia: 1.3, // fémur plus long que tibia
-    humerusToRadius: 1.2, // humérus légèrement plus long que radius
-    context: '',
+    shoulderElbowToElbowWristRatio: onBoarding.arm,
+    torsoLegRatio: onBoarding.torso / onBoarding.leg,
+    context: contextText,
   })
 
   const model = new ChatOpenAI({

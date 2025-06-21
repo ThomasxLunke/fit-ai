@@ -1706,6 +1706,7 @@ export namespace Prisma {
     onboarded?: boolean
     sessions?: boolean | User$sessionsArgs<ExtArgs>
     accounts?: boolean | User$accountsArgs<ExtArgs>
+    program?: boolean | User$programArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["user"]>
 
@@ -1746,6 +1747,7 @@ export namespace Prisma {
   export type UserInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     sessions?: boolean | User$sessionsArgs<ExtArgs>
     accounts?: boolean | User$accountsArgs<ExtArgs>
+    program?: boolean | User$programArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type UserIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
@@ -1756,6 +1758,7 @@ export namespace Prisma {
     objects: {
       sessions: Prisma.$SessionPayload<ExtArgs>[]
       accounts: Prisma.$AccountPayload<ExtArgs>[]
+      program: Prisma.$ProgramPayload<ExtArgs> | null
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -2162,6 +2165,7 @@ export namespace Prisma {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     sessions<T extends User$sessionsArgs<ExtArgs> = {}>(args?: Subset<T, User$sessionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     accounts<T extends User$accountsArgs<ExtArgs> = {}>(args?: Subset<T, User$accountsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AccountPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    program<T extends User$programArgs<ExtArgs> = {}>(args?: Subset<T, User$programArgs<ExtArgs>>): Prisma__ProgramClient<$Result.GetResult<Prisma.$ProgramPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2635,6 +2639,25 @@ export namespace Prisma {
   }
 
   /**
+   * User.program
+   */
+  export type User$programArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Program
+     */
+    select?: ProgramSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Program
+     */
+    omit?: ProgramOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ProgramInclude<ExtArgs> | null
+    where?: ProgramWhereInput
+  }
+
+  /**
    * User without action
    */
   export type UserDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -2659,24 +2682,36 @@ export namespace Prisma {
 
   export type AggregateProgram = {
     _count: ProgramCountAggregateOutputType | null
+    _avg: ProgramAvgAggregateOutputType | null
+    _sum: ProgramSumAggregateOutputType | null
     _min: ProgramMinAggregateOutputType | null
     _max: ProgramMaxAggregateOutputType | null
   }
 
+  export type ProgramAvgAggregateOutputType = {
+    id: number | null
+  }
+
+  export type ProgramSumAggregateOutputType = {
+    id: number | null
+  }
+
   export type ProgramMinAggregateOutputType = {
-    id: string | null
+    id: number | null
     name: string | null
     description: string | null
     createdAt: Date | null
     updatedAt: Date | null
+    userId: string | null
   }
 
   export type ProgramMaxAggregateOutputType = {
-    id: string | null
+    id: number | null
     name: string | null
     description: string | null
     createdAt: Date | null
     updatedAt: Date | null
+    userId: string | null
   }
 
   export type ProgramCountAggregateOutputType = {
@@ -2685,9 +2720,18 @@ export namespace Prisma {
     description: number
     createdAt: number
     updatedAt: number
+    userId: number
     _all: number
   }
 
+
+  export type ProgramAvgAggregateInputType = {
+    id?: true
+  }
+
+  export type ProgramSumAggregateInputType = {
+    id?: true
+  }
 
   export type ProgramMinAggregateInputType = {
     id?: true
@@ -2695,6 +2739,7 @@ export namespace Prisma {
     description?: true
     createdAt?: true
     updatedAt?: true
+    userId?: true
   }
 
   export type ProgramMaxAggregateInputType = {
@@ -2703,6 +2748,7 @@ export namespace Prisma {
     description?: true
     createdAt?: true
     updatedAt?: true
+    userId?: true
   }
 
   export type ProgramCountAggregateInputType = {
@@ -2711,6 +2757,7 @@ export namespace Prisma {
     description?: true
     createdAt?: true
     updatedAt?: true
+    userId?: true
     _all?: true
   }
 
@@ -2752,6 +2799,18 @@ export namespace Prisma {
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
      * 
+     * Select which fields to average
+    **/
+    _avg?: ProgramAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: ProgramSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
      * Select which fields to find the minimum value
     **/
     _min?: ProgramMinAggregateInputType
@@ -2782,17 +2841,22 @@ export namespace Prisma {
     take?: number
     skip?: number
     _count?: ProgramCountAggregateInputType | true
+    _avg?: ProgramAvgAggregateInputType
+    _sum?: ProgramSumAggregateInputType
     _min?: ProgramMinAggregateInputType
     _max?: ProgramMaxAggregateInputType
   }
 
   export type ProgramGroupByOutputType = {
-    id: string
+    id: number
     name: string
     description: string
     createdAt: Date
     updatedAt: Date
+    userId: string
     _count: ProgramCountAggregateOutputType | null
+    _avg: ProgramAvgAggregateOutputType | null
+    _sum: ProgramSumAggregateOutputType | null
     _min: ProgramMinAggregateOutputType | null
     _max: ProgramMaxAggregateOutputType | null
   }
@@ -2817,7 +2881,9 @@ export namespace Prisma {
     description?: boolean
     createdAt?: boolean
     updatedAt?: boolean
+    userId?: boolean
     trainingSessions?: boolean | Program$trainingSessionsArgs<ExtArgs>
+    user?: boolean | UserDefaultArgs<ExtArgs>
     _count?: boolean | ProgramCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["program"]>
 
@@ -2827,6 +2893,8 @@ export namespace Prisma {
     description?: boolean
     createdAt?: boolean
     updatedAt?: boolean
+    userId?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["program"]>
 
   export type ProgramSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -2835,6 +2903,8 @@ export namespace Prisma {
     description?: boolean
     createdAt?: boolean
     updatedAt?: boolean
+    userId?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["program"]>
 
   export type ProgramSelectScalar = {
@@ -2843,27 +2913,35 @@ export namespace Prisma {
     description?: boolean
     createdAt?: boolean
     updatedAt?: boolean
+    userId?: boolean
   }
 
-  export type ProgramOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "description" | "createdAt" | "updatedAt", ExtArgs["result"]["program"]>
+  export type ProgramOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "description" | "createdAt" | "updatedAt" | "userId", ExtArgs["result"]["program"]>
   export type ProgramInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     trainingSessions?: boolean | Program$trainingSessionsArgs<ExtArgs>
+    user?: boolean | UserDefaultArgs<ExtArgs>
     _count?: boolean | ProgramCountOutputTypeDefaultArgs<ExtArgs>
   }
-  export type ProgramIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
-  export type ProgramIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
+  export type ProgramIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+  export type ProgramIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
 
   export type $ProgramPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "Program"
     objects: {
       trainingSessions: Prisma.$TrainingSessionPayload<ExtArgs>[]
+      user: Prisma.$UserPayload<ExtArgs>
     }
     scalars: $Extensions.GetPayloadResult<{
-      id: string
+      id: number
       name: string
       description: string
       createdAt: Date
       updatedAt: Date
+      userId: string
     }, ExtArgs["result"]["program"]>
     composites: {}
   }
@@ -3259,6 +3337,7 @@ export namespace Prisma {
   export interface Prisma__ProgramClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     trainingSessions<T extends Program$trainingSessionsArgs<ExtArgs> = {}>(args?: Subset<T, Program$trainingSessionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TrainingSessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -3288,11 +3367,12 @@ export namespace Prisma {
    * Fields of the Program model
    */
   interface ProgramFieldRefs {
-    readonly id: FieldRef<"Program", 'String'>
+    readonly id: FieldRef<"Program", 'Int'>
     readonly name: FieldRef<"Program", 'String'>
     readonly description: FieldRef<"Program", 'String'>
     readonly createdAt: FieldRef<"Program", 'DateTime'>
     readonly updatedAt: FieldRef<"Program", 'DateTime'>
+    readonly userId: FieldRef<"Program", 'String'>
   }
     
 
@@ -3542,6 +3622,10 @@ export namespace Prisma {
      */
     data: ProgramCreateManyInput | ProgramCreateManyInput[]
     skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ProgramIncludeCreateManyAndReturn<ExtArgs> | null
   }
 
   /**
@@ -3612,6 +3696,10 @@ export namespace Prisma {
      * Limit how many Programs to update.
      */
     limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ProgramIncludeUpdateManyAndReturn<ExtArgs> | null
   }
 
   /**
@@ -3729,31 +3817,46 @@ export namespace Prisma {
 
   export type AggregateTrainingSession = {
     _count: TrainingSessionCountAggregateOutputType | null
+    _avg: TrainingSessionAvgAggregateOutputType | null
+    _sum: TrainingSessionSumAggregateOutputType | null
     _min: TrainingSessionMinAggregateOutputType | null
     _max: TrainingSessionMaxAggregateOutputType | null
   }
 
+  export type TrainingSessionAvgAggregateOutputType = {
+    id: number | null
+    programId: number | null
+  }
+
+  export type TrainingSessionSumAggregateOutputType = {
+    id: number | null
+    programId: number | null
+  }
+
   export type TrainingSessionMinAggregateOutputType = {
-    id: string | null
+    id: number | null
     name: string | null
+    day: string | null
     description: string | null
     createdAt: Date | null
     updatedAt: Date | null
-    programId: string | null
+    programId: number | null
   }
 
   export type TrainingSessionMaxAggregateOutputType = {
-    id: string | null
+    id: number | null
     name: string | null
+    day: string | null
     description: string | null
     createdAt: Date | null
     updatedAt: Date | null
-    programId: string | null
+    programId: number | null
   }
 
   export type TrainingSessionCountAggregateOutputType = {
     id: number
     name: number
+    day: number
     description: number
     createdAt: number
     updatedAt: number
@@ -3762,9 +3865,20 @@ export namespace Prisma {
   }
 
 
+  export type TrainingSessionAvgAggregateInputType = {
+    id?: true
+    programId?: true
+  }
+
+  export type TrainingSessionSumAggregateInputType = {
+    id?: true
+    programId?: true
+  }
+
   export type TrainingSessionMinAggregateInputType = {
     id?: true
     name?: true
+    day?: true
     description?: true
     createdAt?: true
     updatedAt?: true
@@ -3774,6 +3888,7 @@ export namespace Prisma {
   export type TrainingSessionMaxAggregateInputType = {
     id?: true
     name?: true
+    day?: true
     description?: true
     createdAt?: true
     updatedAt?: true
@@ -3783,6 +3898,7 @@ export namespace Prisma {
   export type TrainingSessionCountAggregateInputType = {
     id?: true
     name?: true
+    day?: true
     description?: true
     createdAt?: true
     updatedAt?: true
@@ -3828,6 +3944,18 @@ export namespace Prisma {
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
      * 
+     * Select which fields to average
+    **/
+    _avg?: TrainingSessionAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: TrainingSessionSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
      * Select which fields to find the minimum value
     **/
     _min?: TrainingSessionMinAggregateInputType
@@ -3858,18 +3986,23 @@ export namespace Prisma {
     take?: number
     skip?: number
     _count?: TrainingSessionCountAggregateInputType | true
+    _avg?: TrainingSessionAvgAggregateInputType
+    _sum?: TrainingSessionSumAggregateInputType
     _min?: TrainingSessionMinAggregateInputType
     _max?: TrainingSessionMaxAggregateInputType
   }
 
   export type TrainingSessionGroupByOutputType = {
-    id: string
+    id: number
     name: string
+    day: string
     description: string
     createdAt: Date
     updatedAt: Date
-    programId: string
+    programId: number
     _count: TrainingSessionCountAggregateOutputType | null
+    _avg: TrainingSessionAvgAggregateOutputType | null
+    _sum: TrainingSessionSumAggregateOutputType | null
     _min: TrainingSessionMinAggregateOutputType | null
     _max: TrainingSessionMaxAggregateOutputType | null
   }
@@ -3891,6 +4024,7 @@ export namespace Prisma {
   export type TrainingSessionSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
     name?: boolean
+    day?: boolean
     description?: boolean
     createdAt?: boolean
     updatedAt?: boolean
@@ -3903,6 +4037,7 @@ export namespace Prisma {
   export type TrainingSessionSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
     name?: boolean
+    day?: boolean
     description?: boolean
     createdAt?: boolean
     updatedAt?: boolean
@@ -3913,6 +4048,7 @@ export namespace Prisma {
   export type TrainingSessionSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
     name?: boolean
+    day?: boolean
     description?: boolean
     createdAt?: boolean
     updatedAt?: boolean
@@ -3923,13 +4059,14 @@ export namespace Prisma {
   export type TrainingSessionSelectScalar = {
     id?: boolean
     name?: boolean
+    day?: boolean
     description?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     programId?: boolean
   }
 
-  export type TrainingSessionOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "description" | "createdAt" | "updatedAt" | "programId", ExtArgs["result"]["trainingSession"]>
+  export type TrainingSessionOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "day" | "description" | "createdAt" | "updatedAt" | "programId", ExtArgs["result"]["trainingSession"]>
   export type TrainingSessionInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     exercises?: boolean | TrainingSession$exercisesArgs<ExtArgs>
     program?: boolean | ProgramDefaultArgs<ExtArgs>
@@ -3949,12 +4086,13 @@ export namespace Prisma {
       program: Prisma.$ProgramPayload<ExtArgs>
     }
     scalars: $Extensions.GetPayloadResult<{
-      id: string
+      id: number
       name: string
+      day: string
       description: string
       createdAt: Date
       updatedAt: Date
-      programId: string
+      programId: number
     }, ExtArgs["result"]["trainingSession"]>
     composites: {}
   }
@@ -4380,12 +4518,13 @@ export namespace Prisma {
    * Fields of the TrainingSession model
    */
   interface TrainingSessionFieldRefs {
-    readonly id: FieldRef<"TrainingSession", 'String'>
+    readonly id: FieldRef<"TrainingSession", 'Int'>
     readonly name: FieldRef<"TrainingSession", 'String'>
+    readonly day: FieldRef<"TrainingSession", 'String'>
     readonly description: FieldRef<"TrainingSession", 'String'>
     readonly createdAt: FieldRef<"TrainingSession", 'DateTime'>
     readonly updatedAt: FieldRef<"TrainingSession", 'DateTime'>
-    readonly programId: FieldRef<"TrainingSession", 'String'>
+    readonly programId: FieldRef<"TrainingSession", 'Int'>
   }
     
 
@@ -4837,39 +4976,53 @@ export namespace Prisma {
   }
 
   export type ExerciseAvgAggregateOutputType = {
+    id: number | null
     sets: number | null
     reps: number | null
     weight: number | null
+    sourcePage: number | null
+    trainingSessionId: number | null
   }
 
   export type ExerciseSumAggregateOutputType = {
+    id: number | null
     sets: number | null
     reps: number | null
     weight: number | null
+    sourcePage: number | null
+    trainingSessionId: number | null
   }
 
   export type ExerciseMinAggregateOutputType = {
-    id: string | null
+    id: number | null
     name: string | null
     description: string | null
     sets: number | null
     reps: number | null
     weight: number | null
+    reason: string | null
+    sourceBook: string | null
+    sourcePage: number | null
+    sourceExcerpt: string | null
     createdAt: Date | null
     updatedAt: Date | null
-    trainingSessionId: string | null
+    trainingSessionId: number | null
   }
 
   export type ExerciseMaxAggregateOutputType = {
-    id: string | null
+    id: number | null
     name: string | null
     description: string | null
     sets: number | null
     reps: number | null
     weight: number | null
+    reason: string | null
+    sourceBook: string | null
+    sourcePage: number | null
+    sourceExcerpt: string | null
     createdAt: Date | null
     updatedAt: Date | null
-    trainingSessionId: string | null
+    trainingSessionId: number | null
   }
 
   export type ExerciseCountAggregateOutputType = {
@@ -4879,6 +5032,10 @@ export namespace Prisma {
     sets: number
     reps: number
     weight: number
+    reason: number
+    sourceBook: number
+    sourcePage: number
+    sourceExcerpt: number
     createdAt: number
     updatedAt: number
     trainingSessionId: number
@@ -4887,15 +5044,21 @@ export namespace Prisma {
 
 
   export type ExerciseAvgAggregateInputType = {
+    id?: true
     sets?: true
     reps?: true
     weight?: true
+    sourcePage?: true
+    trainingSessionId?: true
   }
 
   export type ExerciseSumAggregateInputType = {
+    id?: true
     sets?: true
     reps?: true
     weight?: true
+    sourcePage?: true
+    trainingSessionId?: true
   }
 
   export type ExerciseMinAggregateInputType = {
@@ -4905,6 +5068,10 @@ export namespace Prisma {
     sets?: true
     reps?: true
     weight?: true
+    reason?: true
+    sourceBook?: true
+    sourcePage?: true
+    sourceExcerpt?: true
     createdAt?: true
     updatedAt?: true
     trainingSessionId?: true
@@ -4917,6 +5084,10 @@ export namespace Prisma {
     sets?: true
     reps?: true
     weight?: true
+    reason?: true
+    sourceBook?: true
+    sourcePage?: true
+    sourceExcerpt?: true
     createdAt?: true
     updatedAt?: true
     trainingSessionId?: true
@@ -4929,6 +5100,10 @@ export namespace Prisma {
     sets?: true
     reps?: true
     weight?: true
+    reason?: true
+    sourceBook?: true
+    sourcePage?: true
+    sourceExcerpt?: true
     createdAt?: true
     updatedAt?: true
     trainingSessionId?: true
@@ -5022,15 +5197,19 @@ export namespace Prisma {
   }
 
   export type ExerciseGroupByOutputType = {
-    id: string
+    id: number
     name: string
     description: string
     sets: number
     reps: number
     weight: number
+    reason: string
+    sourceBook: string
+    sourcePage: number
+    sourceExcerpt: string
     createdAt: Date
     updatedAt: Date
-    trainingSessionId: string
+    trainingSessionId: number
     _count: ExerciseCountAggregateOutputType | null
     _avg: ExerciseAvgAggregateOutputType | null
     _sum: ExerciseSumAggregateOutputType | null
@@ -5059,6 +5238,10 @@ export namespace Prisma {
     sets?: boolean
     reps?: boolean
     weight?: boolean
+    reason?: boolean
+    sourceBook?: boolean
+    sourcePage?: boolean
+    sourceExcerpt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     trainingSessionId?: boolean
@@ -5072,6 +5255,10 @@ export namespace Prisma {
     sets?: boolean
     reps?: boolean
     weight?: boolean
+    reason?: boolean
+    sourceBook?: boolean
+    sourcePage?: boolean
+    sourceExcerpt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     trainingSessionId?: boolean
@@ -5085,6 +5272,10 @@ export namespace Prisma {
     sets?: boolean
     reps?: boolean
     weight?: boolean
+    reason?: boolean
+    sourceBook?: boolean
+    sourcePage?: boolean
+    sourceExcerpt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     trainingSessionId?: boolean
@@ -5098,12 +5289,16 @@ export namespace Prisma {
     sets?: boolean
     reps?: boolean
     weight?: boolean
+    reason?: boolean
+    sourceBook?: boolean
+    sourcePage?: boolean
+    sourceExcerpt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     trainingSessionId?: boolean
   }
 
-  export type ExerciseOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "description" | "sets" | "reps" | "weight" | "createdAt" | "updatedAt" | "trainingSessionId", ExtArgs["result"]["exercise"]>
+  export type ExerciseOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "description" | "sets" | "reps" | "weight" | "reason" | "sourceBook" | "sourcePage" | "sourceExcerpt" | "createdAt" | "updatedAt" | "trainingSessionId", ExtArgs["result"]["exercise"]>
   export type ExerciseInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     session?: boolean | TrainingSessionDefaultArgs<ExtArgs>
   }
@@ -5120,15 +5315,19 @@ export namespace Prisma {
       session: Prisma.$TrainingSessionPayload<ExtArgs>
     }
     scalars: $Extensions.GetPayloadResult<{
-      id: string
+      id: number
       name: string
       description: string
       sets: number
       reps: number
       weight: number
+      reason: string
+      sourceBook: string
+      sourcePage: number
+      sourceExcerpt: string
       createdAt: Date
       updatedAt: Date
-      trainingSessionId: string
+      trainingSessionId: number
     }, ExtArgs["result"]["exercise"]>
     composites: {}
   }
@@ -5553,15 +5752,19 @@ export namespace Prisma {
    * Fields of the Exercise model
    */
   interface ExerciseFieldRefs {
-    readonly id: FieldRef<"Exercise", 'String'>
+    readonly id: FieldRef<"Exercise", 'Int'>
     readonly name: FieldRef<"Exercise", 'String'>
     readonly description: FieldRef<"Exercise", 'String'>
     readonly sets: FieldRef<"Exercise", 'Int'>
     readonly reps: FieldRef<"Exercise", 'Int'>
     readonly weight: FieldRef<"Exercise", 'Int'>
+    readonly reason: FieldRef<"Exercise", 'String'>
+    readonly sourceBook: FieldRef<"Exercise", 'String'>
+    readonly sourcePage: FieldRef<"Exercise", 'Int'>
+    readonly sourceExcerpt: FieldRef<"Exercise", 'String'>
     readonly createdAt: FieldRef<"Exercise", 'DateTime'>
     readonly updatedAt: FieldRef<"Exercise", 'DateTime'>
-    readonly trainingSessionId: FieldRef<"Exercise", 'String'>
+    readonly trainingSessionId: FieldRef<"Exercise", 'Int'>
   }
     
 
@@ -5982,12 +6185,22 @@ export namespace Prisma {
 
   export type AggregateSession = {
     _count: SessionCountAggregateOutputType | null
+    _avg: SessionAvgAggregateOutputType | null
+    _sum: SessionSumAggregateOutputType | null
     _min: SessionMinAggregateOutputType | null
     _max: SessionMaxAggregateOutputType | null
   }
 
+  export type SessionAvgAggregateOutputType = {
+    id: number | null
+  }
+
+  export type SessionSumAggregateOutputType = {
+    id: number | null
+  }
+
   export type SessionMinAggregateOutputType = {
-    id: string | null
+    id: number | null
     expiresAt: Date | null
     token: string | null
     createdAt: Date | null
@@ -5998,7 +6211,7 @@ export namespace Prisma {
   }
 
   export type SessionMaxAggregateOutputType = {
-    id: string | null
+    id: number | null
     expiresAt: Date | null
     token: string | null
     createdAt: Date | null
@@ -6020,6 +6233,14 @@ export namespace Prisma {
     _all: number
   }
 
+
+  export type SessionAvgAggregateInputType = {
+    id?: true
+  }
+
+  export type SessionSumAggregateInputType = {
+    id?: true
+  }
 
   export type SessionMinAggregateInputType = {
     id?: true
@@ -6093,6 +6314,18 @@ export namespace Prisma {
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
      * 
+     * Select which fields to average
+    **/
+    _avg?: SessionAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: SessionSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
      * Select which fields to find the minimum value
     **/
     _min?: SessionMinAggregateInputType
@@ -6123,12 +6356,14 @@ export namespace Prisma {
     take?: number
     skip?: number
     _count?: SessionCountAggregateInputType | true
+    _avg?: SessionAvgAggregateInputType
+    _sum?: SessionSumAggregateInputType
     _min?: SessionMinAggregateInputType
     _max?: SessionMaxAggregateInputType
   }
 
   export type SessionGroupByOutputType = {
-    id: string
+    id: number
     expiresAt: Date
     token: string
     createdAt: Date
@@ -6137,6 +6372,8 @@ export namespace Prisma {
     userAgent: string | null
     userId: string
     _count: SessionCountAggregateOutputType | null
+    _avg: SessionAvgAggregateOutputType | null
+    _sum: SessionSumAggregateOutputType | null
     _min: SessionMinAggregateOutputType | null
     _max: SessionMaxAggregateOutputType | null
   }
@@ -6219,7 +6456,7 @@ export namespace Prisma {
       user: Prisma.$UserPayload<ExtArgs>
     }
     scalars: $Extensions.GetPayloadResult<{
-      id: string
+      id: number
       expiresAt: Date
       token: string
       createdAt: Date
@@ -6651,7 +6888,7 @@ export namespace Prisma {
    * Fields of the Session model
    */
   interface SessionFieldRefs {
-    readonly id: FieldRef<"Session", 'String'>
+    readonly id: FieldRef<"Session", 'Int'>
     readonly expiresAt: FieldRef<"Session", 'DateTime'>
     readonly token: FieldRef<"Session", 'String'>
     readonly createdAt: FieldRef<"Session", 'DateTime'>
@@ -9276,7 +9513,8 @@ export namespace Prisma {
     name: 'name',
     description: 'description',
     createdAt: 'createdAt',
-    updatedAt: 'updatedAt'
+    updatedAt: 'updatedAt',
+    userId: 'userId'
   };
 
   export type ProgramScalarFieldEnum = (typeof ProgramScalarFieldEnum)[keyof typeof ProgramScalarFieldEnum]
@@ -9285,6 +9523,7 @@ export namespace Prisma {
   export const TrainingSessionScalarFieldEnum: {
     id: 'id',
     name: 'name',
+    day: 'day',
     description: 'description',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt',
@@ -9301,6 +9540,10 @@ export namespace Prisma {
     sets: 'sets',
     reps: 'reps',
     weight: 'weight',
+    reason: 'reason',
+    sourceBook: 'sourceBook',
+    sourcePage: 'sourcePage',
+    sourceExcerpt: 'sourceExcerpt',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt',
     trainingSessionId: 'trainingSessionId'
@@ -9463,6 +9706,7 @@ export namespace Prisma {
     onboarded?: BoolFilter<"User"> | boolean
     sessions?: SessionListRelationFilter
     accounts?: AccountListRelationFilter
+    program?: XOR<ProgramNullableScalarRelationFilter, ProgramWhereInput> | null
   }
 
   export type UserOrderByWithRelationInput = {
@@ -9476,6 +9720,7 @@ export namespace Prisma {
     onboarded?: SortOrder
     sessions?: SessionOrderByRelationAggregateInput
     accounts?: AccountOrderByRelationAggregateInput
+    program?: ProgramOrderByWithRelationInput
   }
 
   export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -9492,6 +9737,7 @@ export namespace Prisma {
     onboarded?: BoolFilter<"User"> | boolean
     sessions?: SessionListRelationFilter
     accounts?: AccountListRelationFilter
+    program?: XOR<ProgramNullableScalarRelationFilter, ProgramWhereInput> | null
   }, "id" | "email">
 
   export type UserOrderByWithAggregationInput = {
@@ -9526,12 +9772,14 @@ export namespace Prisma {
     AND?: ProgramWhereInput | ProgramWhereInput[]
     OR?: ProgramWhereInput[]
     NOT?: ProgramWhereInput | ProgramWhereInput[]
-    id?: StringFilter<"Program"> | string
+    id?: IntFilter<"Program"> | number
     name?: StringFilter<"Program"> | string
     description?: StringFilter<"Program"> | string
     createdAt?: DateTimeFilter<"Program"> | Date | string
     updatedAt?: DateTimeFilter<"Program"> | Date | string
+    userId?: StringFilter<"Program"> | string
     trainingSessions?: TrainingSessionListRelationFilter
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
   }
 
   export type ProgramOrderByWithRelationInput = {
@@ -9540,11 +9788,14 @@ export namespace Prisma {
     description?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+    userId?: SortOrder
     trainingSessions?: TrainingSessionOrderByRelationAggregateInput
+    user?: UserOrderByWithRelationInput
   }
 
   export type ProgramWhereUniqueInput = Prisma.AtLeast<{
-    id?: string
+    id?: number
+    userId?: string
     AND?: ProgramWhereInput | ProgramWhereInput[]
     OR?: ProgramWhereInput[]
     NOT?: ProgramWhereInput | ProgramWhereInput[]
@@ -9553,7 +9804,8 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"Program"> | Date | string
     updatedAt?: DateTimeFilter<"Program"> | Date | string
     trainingSessions?: TrainingSessionListRelationFilter
-  }, "id">
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
+  }, "id" | "userId">
 
   export type ProgramOrderByWithAggregationInput = {
     id?: SortOrder
@@ -9561,32 +9813,37 @@ export namespace Prisma {
     description?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+    userId?: SortOrder
     _count?: ProgramCountOrderByAggregateInput
+    _avg?: ProgramAvgOrderByAggregateInput
     _max?: ProgramMaxOrderByAggregateInput
     _min?: ProgramMinOrderByAggregateInput
+    _sum?: ProgramSumOrderByAggregateInput
   }
 
   export type ProgramScalarWhereWithAggregatesInput = {
     AND?: ProgramScalarWhereWithAggregatesInput | ProgramScalarWhereWithAggregatesInput[]
     OR?: ProgramScalarWhereWithAggregatesInput[]
     NOT?: ProgramScalarWhereWithAggregatesInput | ProgramScalarWhereWithAggregatesInput[]
-    id?: StringWithAggregatesFilter<"Program"> | string
+    id?: IntWithAggregatesFilter<"Program"> | number
     name?: StringWithAggregatesFilter<"Program"> | string
     description?: StringWithAggregatesFilter<"Program"> | string
     createdAt?: DateTimeWithAggregatesFilter<"Program"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Program"> | Date | string
+    userId?: StringWithAggregatesFilter<"Program"> | string
   }
 
   export type TrainingSessionWhereInput = {
     AND?: TrainingSessionWhereInput | TrainingSessionWhereInput[]
     OR?: TrainingSessionWhereInput[]
     NOT?: TrainingSessionWhereInput | TrainingSessionWhereInput[]
-    id?: StringFilter<"TrainingSession"> | string
+    id?: IntFilter<"TrainingSession"> | number
     name?: StringFilter<"TrainingSession"> | string
+    day?: StringFilter<"TrainingSession"> | string
     description?: StringFilter<"TrainingSession"> | string
     createdAt?: DateTimeFilter<"TrainingSession"> | Date | string
     updatedAt?: DateTimeFilter<"TrainingSession"> | Date | string
-    programId?: StringFilter<"TrainingSession"> | string
+    programId?: IntFilter<"TrainingSession"> | number
     exercises?: ExerciseListRelationFilter
     program?: XOR<ProgramScalarRelationFilter, ProgramWhereInput>
   }
@@ -9594,6 +9851,7 @@ export namespace Prisma {
   export type TrainingSessionOrderByWithRelationInput = {
     id?: SortOrder
     name?: SortOrder
+    day?: SortOrder
     description?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -9603,15 +9861,16 @@ export namespace Prisma {
   }
 
   export type TrainingSessionWhereUniqueInput = Prisma.AtLeast<{
-    id?: string
+    id?: number
     AND?: TrainingSessionWhereInput | TrainingSessionWhereInput[]
     OR?: TrainingSessionWhereInput[]
     NOT?: TrainingSessionWhereInput | TrainingSessionWhereInput[]
     name?: StringFilter<"TrainingSession"> | string
+    day?: StringFilter<"TrainingSession"> | string
     description?: StringFilter<"TrainingSession"> | string
     createdAt?: DateTimeFilter<"TrainingSession"> | Date | string
     updatedAt?: DateTimeFilter<"TrainingSession"> | Date | string
-    programId?: StringFilter<"TrainingSession"> | string
+    programId?: IntFilter<"TrainingSession"> | number
     exercises?: ExerciseListRelationFilter
     program?: XOR<ProgramScalarRelationFilter, ProgramWhereInput>
   }, "id">
@@ -9619,40 +9878,48 @@ export namespace Prisma {
   export type TrainingSessionOrderByWithAggregationInput = {
     id?: SortOrder
     name?: SortOrder
+    day?: SortOrder
     description?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     programId?: SortOrder
     _count?: TrainingSessionCountOrderByAggregateInput
+    _avg?: TrainingSessionAvgOrderByAggregateInput
     _max?: TrainingSessionMaxOrderByAggregateInput
     _min?: TrainingSessionMinOrderByAggregateInput
+    _sum?: TrainingSessionSumOrderByAggregateInput
   }
 
   export type TrainingSessionScalarWhereWithAggregatesInput = {
     AND?: TrainingSessionScalarWhereWithAggregatesInput | TrainingSessionScalarWhereWithAggregatesInput[]
     OR?: TrainingSessionScalarWhereWithAggregatesInput[]
     NOT?: TrainingSessionScalarWhereWithAggregatesInput | TrainingSessionScalarWhereWithAggregatesInput[]
-    id?: StringWithAggregatesFilter<"TrainingSession"> | string
+    id?: IntWithAggregatesFilter<"TrainingSession"> | number
     name?: StringWithAggregatesFilter<"TrainingSession"> | string
+    day?: StringWithAggregatesFilter<"TrainingSession"> | string
     description?: StringWithAggregatesFilter<"TrainingSession"> | string
     createdAt?: DateTimeWithAggregatesFilter<"TrainingSession"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"TrainingSession"> | Date | string
-    programId?: StringWithAggregatesFilter<"TrainingSession"> | string
+    programId?: IntWithAggregatesFilter<"TrainingSession"> | number
   }
 
   export type ExerciseWhereInput = {
     AND?: ExerciseWhereInput | ExerciseWhereInput[]
     OR?: ExerciseWhereInput[]
     NOT?: ExerciseWhereInput | ExerciseWhereInput[]
-    id?: StringFilter<"Exercise"> | string
+    id?: IntFilter<"Exercise"> | number
     name?: StringFilter<"Exercise"> | string
     description?: StringFilter<"Exercise"> | string
     sets?: IntFilter<"Exercise"> | number
     reps?: IntFilter<"Exercise"> | number
     weight?: IntFilter<"Exercise"> | number
+    reason?: StringFilter<"Exercise"> | string
+    sourceBook?: StringFilter<"Exercise"> | string
+    sourcePage?: IntFilter<"Exercise"> | number
+    sourceExcerpt?: StringFilter<"Exercise"> | string
     createdAt?: DateTimeFilter<"Exercise"> | Date | string
     updatedAt?: DateTimeFilter<"Exercise"> | Date | string
-    trainingSessionId?: StringFilter<"Exercise"> | string
+    trainingSessionId?: IntFilter<"Exercise"> | number
     session?: XOR<TrainingSessionScalarRelationFilter, TrainingSessionWhereInput>
   }
 
@@ -9663,6 +9930,10 @@ export namespace Prisma {
     sets?: SortOrder
     reps?: SortOrder
     weight?: SortOrder
+    reason?: SortOrder
+    sourceBook?: SortOrder
+    sourcePage?: SortOrder
+    sourceExcerpt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     trainingSessionId?: SortOrder
@@ -9670,7 +9941,7 @@ export namespace Prisma {
   }
 
   export type ExerciseWhereUniqueInput = Prisma.AtLeast<{
-    id?: string
+    id?: number
     AND?: ExerciseWhereInput | ExerciseWhereInput[]
     OR?: ExerciseWhereInput[]
     NOT?: ExerciseWhereInput | ExerciseWhereInput[]
@@ -9679,9 +9950,13 @@ export namespace Prisma {
     sets?: IntFilter<"Exercise"> | number
     reps?: IntFilter<"Exercise"> | number
     weight?: IntFilter<"Exercise"> | number
+    reason?: StringFilter<"Exercise"> | string
+    sourceBook?: StringFilter<"Exercise"> | string
+    sourcePage?: IntFilter<"Exercise"> | number
+    sourceExcerpt?: StringFilter<"Exercise"> | string
     createdAt?: DateTimeFilter<"Exercise"> | Date | string
     updatedAt?: DateTimeFilter<"Exercise"> | Date | string
-    trainingSessionId?: StringFilter<"Exercise"> | string
+    trainingSessionId?: IntFilter<"Exercise"> | number
     session?: XOR<TrainingSessionScalarRelationFilter, TrainingSessionWhereInput>
   }, "id">
 
@@ -9692,6 +9967,10 @@ export namespace Prisma {
     sets?: SortOrder
     reps?: SortOrder
     weight?: SortOrder
+    reason?: SortOrder
+    sourceBook?: SortOrder
+    sourcePage?: SortOrder
+    sourceExcerpt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     trainingSessionId?: SortOrder
@@ -9706,22 +9985,26 @@ export namespace Prisma {
     AND?: ExerciseScalarWhereWithAggregatesInput | ExerciseScalarWhereWithAggregatesInput[]
     OR?: ExerciseScalarWhereWithAggregatesInput[]
     NOT?: ExerciseScalarWhereWithAggregatesInput | ExerciseScalarWhereWithAggregatesInput[]
-    id?: StringWithAggregatesFilter<"Exercise"> | string
+    id?: IntWithAggregatesFilter<"Exercise"> | number
     name?: StringWithAggregatesFilter<"Exercise"> | string
     description?: StringWithAggregatesFilter<"Exercise"> | string
     sets?: IntWithAggregatesFilter<"Exercise"> | number
     reps?: IntWithAggregatesFilter<"Exercise"> | number
     weight?: IntWithAggregatesFilter<"Exercise"> | number
+    reason?: StringWithAggregatesFilter<"Exercise"> | string
+    sourceBook?: StringWithAggregatesFilter<"Exercise"> | string
+    sourcePage?: IntWithAggregatesFilter<"Exercise"> | number
+    sourceExcerpt?: StringWithAggregatesFilter<"Exercise"> | string
     createdAt?: DateTimeWithAggregatesFilter<"Exercise"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Exercise"> | Date | string
-    trainingSessionId?: StringWithAggregatesFilter<"Exercise"> | string
+    trainingSessionId?: IntWithAggregatesFilter<"Exercise"> | number
   }
 
   export type SessionWhereInput = {
     AND?: SessionWhereInput | SessionWhereInput[]
     OR?: SessionWhereInput[]
     NOT?: SessionWhereInput | SessionWhereInput[]
-    id?: StringFilter<"Session"> | string
+    id?: IntFilter<"Session"> | number
     expiresAt?: DateTimeFilter<"Session"> | Date | string
     token?: StringFilter<"Session"> | string
     createdAt?: DateTimeFilter<"Session"> | Date | string
@@ -9745,7 +10028,7 @@ export namespace Prisma {
   }
 
   export type SessionWhereUniqueInput = Prisma.AtLeast<{
-    id?: string
+    id?: number
     token?: string
     AND?: SessionWhereInput | SessionWhereInput[]
     OR?: SessionWhereInput[]
@@ -9769,15 +10052,17 @@ export namespace Prisma {
     userAgent?: SortOrderInput | SortOrder
     userId?: SortOrder
     _count?: SessionCountOrderByAggregateInput
+    _avg?: SessionAvgOrderByAggregateInput
     _max?: SessionMaxOrderByAggregateInput
     _min?: SessionMinOrderByAggregateInput
+    _sum?: SessionSumOrderByAggregateInput
   }
 
   export type SessionScalarWhereWithAggregatesInput = {
     AND?: SessionScalarWhereWithAggregatesInput | SessionScalarWhereWithAggregatesInput[]
     OR?: SessionScalarWhereWithAggregatesInput[]
     NOT?: SessionScalarWhereWithAggregatesInput | SessionScalarWhereWithAggregatesInput[]
-    id?: StringWithAggregatesFilter<"Session"> | string
+    id?: IntWithAggregatesFilter<"Session"> | number
     expiresAt?: DateTimeWithAggregatesFilter<"Session"> | Date | string
     token?: StringWithAggregatesFilter<"Session"> | string
     createdAt?: DateTimeWithAggregatesFilter<"Session"> | Date | string
@@ -9946,10 +10231,11 @@ export namespace Prisma {
     emailVerified: boolean
     image?: string | null
     createdAt: Date | string
-    updatedAt: Date | string
+    updatedAt?: Date | string
     onboarded?: boolean
     sessions?: SessionCreateNestedManyWithoutUserInput
     accounts?: AccountCreateNestedManyWithoutUserInput
+    program?: ProgramCreateNestedOneWithoutUserInput
   }
 
   export type UserUncheckedCreateInput = {
@@ -9959,10 +10245,11 @@ export namespace Prisma {
     emailVerified: boolean
     image?: string | null
     createdAt: Date | string
-    updatedAt: Date | string
+    updatedAt?: Date | string
     onboarded?: boolean
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
+    program?: ProgramUncheckedCreateNestedOneWithoutUserInput
   }
 
   export type UserUpdateInput = {
@@ -9976,6 +10263,7 @@ export namespace Prisma {
     onboarded?: BoolFieldUpdateOperationsInput | boolean
     sessions?: SessionUpdateManyWithoutUserNestedInput
     accounts?: AccountUpdateManyWithoutUserNestedInput
+    program?: ProgramUpdateOneWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateInput = {
@@ -9989,6 +10277,7 @@ export namespace Prisma {
     onboarded?: BoolFieldUpdateOperationsInput | boolean
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
+    program?: ProgramUncheckedUpdateOneWithoutUserNestedInput
   }
 
   export type UserCreateManyInput = {
@@ -9998,7 +10287,7 @@ export namespace Prisma {
     emailVerified: boolean
     image?: string | null
     createdAt: Date | string
-    updatedAt: Date | string
+    updatedAt?: Date | string
     onboarded?: boolean
   }
 
@@ -10025,51 +10314,53 @@ export namespace Prisma {
   }
 
   export type ProgramCreateInput = {
-    id: string
     name: string
     description: string
-    createdAt: Date | string
-    updatedAt: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
     trainingSessions?: TrainingSessionCreateNestedManyWithoutProgramInput
+    user: UserCreateNestedOneWithoutProgramInput
   }
 
   export type ProgramUncheckedCreateInput = {
-    id: string
+    id?: number
     name: string
     description: string
-    createdAt: Date | string
-    updatedAt: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    userId: string
     trainingSessions?: TrainingSessionUncheckedCreateNestedManyWithoutProgramInput
   }
 
   export type ProgramUpdateInput = {
-    id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     trainingSessions?: TrainingSessionUpdateManyWithoutProgramNestedInput
+    user?: UserUpdateOneRequiredWithoutProgramNestedInput
   }
 
   export type ProgramUncheckedUpdateInput = {
-    id?: StringFieldUpdateOperationsInput | string
+    id?: IntFieldUpdateOperationsInput | number
     name?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    userId?: StringFieldUpdateOperationsInput | string
     trainingSessions?: TrainingSessionUncheckedUpdateManyWithoutProgramNestedInput
   }
 
   export type ProgramCreateManyInput = {
-    id: string
+    id?: number
     name: string
     description: string
-    createdAt: Date | string
-    updatedAt: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    userId: string
   }
 
   export type ProgramUpdateManyMutationInput = {
-    id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -10077,36 +10368,38 @@ export namespace Prisma {
   }
 
   export type ProgramUncheckedUpdateManyInput = {
-    id?: StringFieldUpdateOperationsInput | string
+    id?: IntFieldUpdateOperationsInput | number
     name?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    userId?: StringFieldUpdateOperationsInput | string
   }
 
   export type TrainingSessionCreateInput = {
-    id: string
     name: string
+    day: string
     description: string
-    createdAt: Date | string
-    updatedAt: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
     exercises?: ExerciseCreateNestedManyWithoutSessionInput
     program: ProgramCreateNestedOneWithoutTrainingSessionsInput
   }
 
   export type TrainingSessionUncheckedCreateInput = {
-    id: string
+    id?: number
     name: string
+    day: string
     description: string
-    createdAt: Date | string
-    updatedAt: Date | string
-    programId: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    programId: number
     exercises?: ExerciseUncheckedCreateNestedManyWithoutSessionInput
   }
 
   export type TrainingSessionUpdateInput = {
-    id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
+    day?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -10115,126 +10408,153 @@ export namespace Prisma {
   }
 
   export type TrainingSessionUncheckedUpdateInput = {
-    id?: StringFieldUpdateOperationsInput | string
+    id?: IntFieldUpdateOperationsInput | number
     name?: StringFieldUpdateOperationsInput | string
+    day?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    programId?: StringFieldUpdateOperationsInput | string
+    programId?: IntFieldUpdateOperationsInput | number
     exercises?: ExerciseUncheckedUpdateManyWithoutSessionNestedInput
   }
 
   export type TrainingSessionCreateManyInput = {
-    id: string
+    id?: number
     name: string
+    day: string
     description: string
-    createdAt: Date | string
-    updatedAt: Date | string
-    programId: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    programId: number
   }
 
   export type TrainingSessionUpdateManyMutationInput = {
-    id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
+    day?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type TrainingSessionUncheckedUpdateManyInput = {
-    id?: StringFieldUpdateOperationsInput | string
+    id?: IntFieldUpdateOperationsInput | number
     name?: StringFieldUpdateOperationsInput | string
+    day?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    programId?: StringFieldUpdateOperationsInput | string
+    programId?: IntFieldUpdateOperationsInput | number
   }
 
   export type ExerciseCreateInput = {
-    id: string
     name: string
     description: string
     sets: number
     reps: number
     weight: number
-    createdAt: Date | string
-    updatedAt: Date | string
+    reason: string
+    sourceBook: string
+    sourcePage: number
+    sourceExcerpt: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
     session: TrainingSessionCreateNestedOneWithoutExercisesInput
   }
 
   export type ExerciseUncheckedCreateInput = {
-    id: string
+    id?: number
     name: string
     description: string
     sets: number
     reps: number
     weight: number
-    createdAt: Date | string
-    updatedAt: Date | string
-    trainingSessionId: string
+    reason: string
+    sourceBook: string
+    sourcePage: number
+    sourceExcerpt: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    trainingSessionId: number
   }
 
   export type ExerciseUpdateInput = {
-    id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
     sets?: IntFieldUpdateOperationsInput | number
     reps?: IntFieldUpdateOperationsInput | number
     weight?: IntFieldUpdateOperationsInput | number
+    reason?: StringFieldUpdateOperationsInput | string
+    sourceBook?: StringFieldUpdateOperationsInput | string
+    sourcePage?: IntFieldUpdateOperationsInput | number
+    sourceExcerpt?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     session?: TrainingSessionUpdateOneRequiredWithoutExercisesNestedInput
   }
 
   export type ExerciseUncheckedUpdateInput = {
-    id?: StringFieldUpdateOperationsInput | string
+    id?: IntFieldUpdateOperationsInput | number
     name?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
     sets?: IntFieldUpdateOperationsInput | number
     reps?: IntFieldUpdateOperationsInput | number
     weight?: IntFieldUpdateOperationsInput | number
+    reason?: StringFieldUpdateOperationsInput | string
+    sourceBook?: StringFieldUpdateOperationsInput | string
+    sourcePage?: IntFieldUpdateOperationsInput | number
+    sourceExcerpt?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    trainingSessionId?: StringFieldUpdateOperationsInput | string
+    trainingSessionId?: IntFieldUpdateOperationsInput | number
   }
 
   export type ExerciseCreateManyInput = {
-    id: string
+    id?: number
     name: string
     description: string
     sets: number
     reps: number
     weight: number
-    createdAt: Date | string
-    updatedAt: Date | string
-    trainingSessionId: string
+    reason: string
+    sourceBook: string
+    sourcePage: number
+    sourceExcerpt: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    trainingSessionId: number
   }
 
   export type ExerciseUpdateManyMutationInput = {
-    id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
     sets?: IntFieldUpdateOperationsInput | number
     reps?: IntFieldUpdateOperationsInput | number
     weight?: IntFieldUpdateOperationsInput | number
+    reason?: StringFieldUpdateOperationsInput | string
+    sourceBook?: StringFieldUpdateOperationsInput | string
+    sourcePage?: IntFieldUpdateOperationsInput | number
+    sourceExcerpt?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type ExerciseUncheckedUpdateManyInput = {
-    id?: StringFieldUpdateOperationsInput | string
+    id?: IntFieldUpdateOperationsInput | number
     name?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
     sets?: IntFieldUpdateOperationsInput | number
     reps?: IntFieldUpdateOperationsInput | number
     weight?: IntFieldUpdateOperationsInput | number
+    reason?: StringFieldUpdateOperationsInput | string
+    sourceBook?: StringFieldUpdateOperationsInput | string
+    sourcePage?: IntFieldUpdateOperationsInput | number
+    sourceExcerpt?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    trainingSessionId?: StringFieldUpdateOperationsInput | string
+    trainingSessionId?: IntFieldUpdateOperationsInput | number
   }
 
   export type SessionCreateInput = {
-    id: string
     expiresAt: Date | string
     token: string
     createdAt: Date | string
@@ -10245,7 +10565,7 @@ export namespace Prisma {
   }
 
   export type SessionUncheckedCreateInput = {
-    id: string
+    id?: number
     expiresAt: Date | string
     token: string
     createdAt: Date | string
@@ -10256,7 +10576,6 @@ export namespace Prisma {
   }
 
   export type SessionUpdateInput = {
-    id?: StringFieldUpdateOperationsInput | string
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     token?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -10267,7 +10586,7 @@ export namespace Prisma {
   }
 
   export type SessionUncheckedUpdateInput = {
-    id?: StringFieldUpdateOperationsInput | string
+    id?: IntFieldUpdateOperationsInput | number
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     token?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -10278,7 +10597,7 @@ export namespace Prisma {
   }
 
   export type SessionCreateManyInput = {
-    id: string
+    id?: number
     expiresAt: Date | string
     token: string
     createdAt: Date | string
@@ -10289,7 +10608,6 @@ export namespace Prisma {
   }
 
   export type SessionUpdateManyMutationInput = {
-    id?: StringFieldUpdateOperationsInput | string
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     token?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -10299,7 +10617,7 @@ export namespace Prisma {
   }
 
   export type SessionUncheckedUpdateManyInput = {
-    id?: StringFieldUpdateOperationsInput | string
+    id?: IntFieldUpdateOperationsInput | number
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     token?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -10320,8 +10638,8 @@ export namespace Prisma {
     refreshTokenExpiresAt?: Date | string | null
     scope?: string | null
     password?: string | null
-    createdAt: Date | string
-    updatedAt: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
     user: UserCreateNestedOneWithoutAccountsInput
   }
 
@@ -10337,8 +10655,8 @@ export namespace Prisma {
     refreshTokenExpiresAt?: Date | string | null
     scope?: string | null
     password?: string | null
-    createdAt: Date | string
-    updatedAt: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type AccountUpdateInput = {
@@ -10385,8 +10703,8 @@ export namespace Prisma {
     refreshTokenExpiresAt?: Date | string | null
     scope?: string | null
     password?: string | null
-    createdAt: Date | string
-    updatedAt: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type AccountUpdateManyMutationInput = {
@@ -10541,6 +10859,11 @@ export namespace Prisma {
     none?: AccountWhereInput
   }
 
+  export type ProgramNullableScalarRelationFilter = {
+    is?: ProgramWhereInput | null
+    isNot?: ProgramWhereInput | null
+  }
+
   export type SortOrderInput = {
     sort: SortOrder
     nulls?: NullsOrder
@@ -10645,10 +10968,26 @@ export namespace Prisma {
     _max?: NestedDateTimeFilter<$PrismaModel>
   }
 
+  export type IntFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel>
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntFilter<$PrismaModel> | number
+  }
+
   export type TrainingSessionListRelationFilter = {
     every?: TrainingSessionWhereInput
     some?: TrainingSessionWhereInput
     none?: TrainingSessionWhereInput
+  }
+
+  export type UserScalarRelationFilter = {
+    is?: UserWhereInput
+    isNot?: UserWhereInput
   }
 
   export type TrainingSessionOrderByRelationAggregateInput = {
@@ -10661,6 +11000,11 @@ export namespace Prisma {
     description?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+    userId?: SortOrder
+  }
+
+  export type ProgramAvgOrderByAggregateInput = {
+    id?: SortOrder
   }
 
   export type ProgramMaxOrderByAggregateInput = {
@@ -10669,6 +11013,7 @@ export namespace Prisma {
     description?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+    userId?: SortOrder
   }
 
   export type ProgramMinOrderByAggregateInput = {
@@ -10677,6 +11022,27 @@ export namespace Prisma {
     description?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+    userId?: SortOrder
+  }
+
+  export type ProgramSumOrderByAggregateInput = {
+    id?: SortOrder
+  }
+
+  export type IntWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel>
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntWithAggregatesFilter<$PrismaModel> | number
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedFloatFilter<$PrismaModel>
+    _sum?: NestedIntFilter<$PrismaModel>
+    _min?: NestedIntFilter<$PrismaModel>
+    _max?: NestedIntFilter<$PrismaModel>
   }
 
   export type ExerciseListRelationFilter = {
@@ -10697,15 +11063,22 @@ export namespace Prisma {
   export type TrainingSessionCountOrderByAggregateInput = {
     id?: SortOrder
     name?: SortOrder
+    day?: SortOrder
     description?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     programId?: SortOrder
   }
 
+  export type TrainingSessionAvgOrderByAggregateInput = {
+    id?: SortOrder
+    programId?: SortOrder
+  }
+
   export type TrainingSessionMaxOrderByAggregateInput = {
     id?: SortOrder
     name?: SortOrder
+    day?: SortOrder
     description?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -10715,21 +11088,16 @@ export namespace Prisma {
   export type TrainingSessionMinOrderByAggregateInput = {
     id?: SortOrder
     name?: SortOrder
+    day?: SortOrder
     description?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     programId?: SortOrder
   }
 
-  export type IntFilter<$PrismaModel = never> = {
-    equals?: number | IntFieldRefInput<$PrismaModel>
-    in?: number[] | ListIntFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
-    lt?: number | IntFieldRefInput<$PrismaModel>
-    lte?: number | IntFieldRefInput<$PrismaModel>
-    gt?: number | IntFieldRefInput<$PrismaModel>
-    gte?: number | IntFieldRefInput<$PrismaModel>
-    not?: NestedIntFilter<$PrismaModel> | number
+  export type TrainingSessionSumOrderByAggregateInput = {
+    id?: SortOrder
+    programId?: SortOrder
   }
 
   export type TrainingSessionScalarRelationFilter = {
@@ -10744,15 +11112,22 @@ export namespace Prisma {
     sets?: SortOrder
     reps?: SortOrder
     weight?: SortOrder
+    reason?: SortOrder
+    sourceBook?: SortOrder
+    sourcePage?: SortOrder
+    sourceExcerpt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     trainingSessionId?: SortOrder
   }
 
   export type ExerciseAvgOrderByAggregateInput = {
+    id?: SortOrder
     sets?: SortOrder
     reps?: SortOrder
     weight?: SortOrder
+    sourcePage?: SortOrder
+    trainingSessionId?: SortOrder
   }
 
   export type ExerciseMaxOrderByAggregateInput = {
@@ -10762,6 +11137,10 @@ export namespace Prisma {
     sets?: SortOrder
     reps?: SortOrder
     weight?: SortOrder
+    reason?: SortOrder
+    sourceBook?: SortOrder
+    sourcePage?: SortOrder
+    sourceExcerpt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     trainingSessionId?: SortOrder
@@ -10774,36 +11153,22 @@ export namespace Prisma {
     sets?: SortOrder
     reps?: SortOrder
     weight?: SortOrder
+    reason?: SortOrder
+    sourceBook?: SortOrder
+    sourcePage?: SortOrder
+    sourceExcerpt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     trainingSessionId?: SortOrder
   }
 
   export type ExerciseSumOrderByAggregateInput = {
+    id?: SortOrder
     sets?: SortOrder
     reps?: SortOrder
     weight?: SortOrder
-  }
-
-  export type IntWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: number | IntFieldRefInput<$PrismaModel>
-    in?: number[] | ListIntFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
-    lt?: number | IntFieldRefInput<$PrismaModel>
-    lte?: number | IntFieldRefInput<$PrismaModel>
-    gt?: number | IntFieldRefInput<$PrismaModel>
-    gte?: number | IntFieldRefInput<$PrismaModel>
-    not?: NestedIntWithAggregatesFilter<$PrismaModel> | number
-    _count?: NestedIntFilter<$PrismaModel>
-    _avg?: NestedFloatFilter<$PrismaModel>
-    _sum?: NestedIntFilter<$PrismaModel>
-    _min?: NestedIntFilter<$PrismaModel>
-    _max?: NestedIntFilter<$PrismaModel>
-  }
-
-  export type UserScalarRelationFilter = {
-    is?: UserWhereInput
-    isNot?: UserWhereInput
+    sourcePage?: SortOrder
+    trainingSessionId?: SortOrder
   }
 
   export type SessionCountOrderByAggregateInput = {
@@ -10815,6 +11180,10 @@ export namespace Prisma {
     ipAddress?: SortOrder
     userAgent?: SortOrder
     userId?: SortOrder
+  }
+
+  export type SessionAvgOrderByAggregateInput = {
+    id?: SortOrder
   }
 
   export type SessionMaxOrderByAggregateInput = {
@@ -10837,6 +11206,10 @@ export namespace Prisma {
     ipAddress?: SortOrder
     userAgent?: SortOrder
     userId?: SortOrder
+  }
+
+  export type SessionSumOrderByAggregateInput = {
+    id?: SortOrder
   }
 
   export type DateTimeNullableFilter<$PrismaModel = never> = {
@@ -10953,6 +11326,12 @@ export namespace Prisma {
     connect?: AccountWhereUniqueInput | AccountWhereUniqueInput[]
   }
 
+  export type ProgramCreateNestedOneWithoutUserInput = {
+    create?: XOR<ProgramCreateWithoutUserInput, ProgramUncheckedCreateWithoutUserInput>
+    connectOrCreate?: ProgramCreateOrConnectWithoutUserInput
+    connect?: ProgramWhereUniqueInput
+  }
+
   export type SessionUncheckedCreateNestedManyWithoutUserInput = {
     create?: XOR<SessionCreateWithoutUserInput, SessionUncheckedCreateWithoutUserInput> | SessionCreateWithoutUserInput[] | SessionUncheckedCreateWithoutUserInput[]
     connectOrCreate?: SessionCreateOrConnectWithoutUserInput | SessionCreateOrConnectWithoutUserInput[]
@@ -10965,6 +11344,12 @@ export namespace Prisma {
     connectOrCreate?: AccountCreateOrConnectWithoutUserInput | AccountCreateOrConnectWithoutUserInput[]
     createMany?: AccountCreateManyUserInputEnvelope
     connect?: AccountWhereUniqueInput | AccountWhereUniqueInput[]
+  }
+
+  export type ProgramUncheckedCreateNestedOneWithoutUserInput = {
+    create?: XOR<ProgramCreateWithoutUserInput, ProgramUncheckedCreateWithoutUserInput>
+    connectOrCreate?: ProgramCreateOrConnectWithoutUserInput
+    connect?: ProgramWhereUniqueInput
   }
 
   export type StringFieldUpdateOperationsInput = {
@@ -11011,6 +11396,16 @@ export namespace Prisma {
     deleteMany?: AccountScalarWhereInput | AccountScalarWhereInput[]
   }
 
+  export type ProgramUpdateOneWithoutUserNestedInput = {
+    create?: XOR<ProgramCreateWithoutUserInput, ProgramUncheckedCreateWithoutUserInput>
+    connectOrCreate?: ProgramCreateOrConnectWithoutUserInput
+    upsert?: ProgramUpsertWithoutUserInput
+    disconnect?: ProgramWhereInput | boolean
+    delete?: ProgramWhereInput | boolean
+    connect?: ProgramWhereUniqueInput
+    update?: XOR<XOR<ProgramUpdateToOneWithWhereWithoutUserInput, ProgramUpdateWithoutUserInput>, ProgramUncheckedUpdateWithoutUserInput>
+  }
+
   export type SessionUncheckedUpdateManyWithoutUserNestedInput = {
     create?: XOR<SessionCreateWithoutUserInput, SessionUncheckedCreateWithoutUserInput> | SessionCreateWithoutUserInput[] | SessionUncheckedCreateWithoutUserInput[]
     connectOrCreate?: SessionCreateOrConnectWithoutUserInput | SessionCreateOrConnectWithoutUserInput[]
@@ -11039,11 +11434,27 @@ export namespace Prisma {
     deleteMany?: AccountScalarWhereInput | AccountScalarWhereInput[]
   }
 
+  export type ProgramUncheckedUpdateOneWithoutUserNestedInput = {
+    create?: XOR<ProgramCreateWithoutUserInput, ProgramUncheckedCreateWithoutUserInput>
+    connectOrCreate?: ProgramCreateOrConnectWithoutUserInput
+    upsert?: ProgramUpsertWithoutUserInput
+    disconnect?: ProgramWhereInput | boolean
+    delete?: ProgramWhereInput | boolean
+    connect?: ProgramWhereUniqueInput
+    update?: XOR<XOR<ProgramUpdateToOneWithWhereWithoutUserInput, ProgramUpdateWithoutUserInput>, ProgramUncheckedUpdateWithoutUserInput>
+  }
+
   export type TrainingSessionCreateNestedManyWithoutProgramInput = {
     create?: XOR<TrainingSessionCreateWithoutProgramInput, TrainingSessionUncheckedCreateWithoutProgramInput> | TrainingSessionCreateWithoutProgramInput[] | TrainingSessionUncheckedCreateWithoutProgramInput[]
     connectOrCreate?: TrainingSessionCreateOrConnectWithoutProgramInput | TrainingSessionCreateOrConnectWithoutProgramInput[]
     createMany?: TrainingSessionCreateManyProgramInputEnvelope
     connect?: TrainingSessionWhereUniqueInput | TrainingSessionWhereUniqueInput[]
+  }
+
+  export type UserCreateNestedOneWithoutProgramInput = {
+    create?: XOR<UserCreateWithoutProgramInput, UserUncheckedCreateWithoutProgramInput>
+    connectOrCreate?: UserCreateOrConnectWithoutProgramInput
+    connect?: UserWhereUniqueInput
   }
 
   export type TrainingSessionUncheckedCreateNestedManyWithoutProgramInput = {
@@ -11065,6 +11476,22 @@ export namespace Prisma {
     update?: TrainingSessionUpdateWithWhereUniqueWithoutProgramInput | TrainingSessionUpdateWithWhereUniqueWithoutProgramInput[]
     updateMany?: TrainingSessionUpdateManyWithWhereWithoutProgramInput | TrainingSessionUpdateManyWithWhereWithoutProgramInput[]
     deleteMany?: TrainingSessionScalarWhereInput | TrainingSessionScalarWhereInput[]
+  }
+
+  export type UserUpdateOneRequiredWithoutProgramNestedInput = {
+    create?: XOR<UserCreateWithoutProgramInput, UserUncheckedCreateWithoutProgramInput>
+    connectOrCreate?: UserCreateOrConnectWithoutProgramInput
+    upsert?: UserUpsertWithoutProgramInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutProgramInput, UserUpdateWithoutProgramInput>, UserUncheckedUpdateWithoutProgramInput>
+  }
+
+  export type IntFieldUpdateOperationsInput = {
+    set?: number
+    increment?: number
+    decrement?: number
+    multiply?: number
+    divide?: number
   }
 
   export type TrainingSessionUncheckedUpdateManyWithoutProgramNestedInput = {
@@ -11141,14 +11568,6 @@ export namespace Prisma {
     create?: XOR<TrainingSessionCreateWithoutExercisesInput, TrainingSessionUncheckedCreateWithoutExercisesInput>
     connectOrCreate?: TrainingSessionCreateOrConnectWithoutExercisesInput
     connect?: TrainingSessionWhereUniqueInput
-  }
-
-  export type IntFieldUpdateOperationsInput = {
-    set?: number
-    increment?: number
-    decrement?: number
-    multiply?: number
-    divide?: number
   }
 
   export type TrainingSessionUpdateOneRequiredWithoutExercisesNestedInput = {
@@ -11366,7 +11785,6 @@ export namespace Prisma {
   }
 
   export type SessionCreateWithoutUserInput = {
-    id: string
     expiresAt: Date | string
     token: string
     createdAt: Date | string
@@ -11376,7 +11794,7 @@ export namespace Prisma {
   }
 
   export type SessionUncheckedCreateWithoutUserInput = {
-    id: string
+    id?: number
     expiresAt: Date | string
     token: string
     createdAt: Date | string
@@ -11406,8 +11824,8 @@ export namespace Prisma {
     refreshTokenExpiresAt?: Date | string | null
     scope?: string | null
     password?: string | null
-    createdAt: Date | string
-    updatedAt: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type AccountUncheckedCreateWithoutUserInput = {
@@ -11421,8 +11839,8 @@ export namespace Prisma {
     refreshTokenExpiresAt?: Date | string | null
     scope?: string | null
     password?: string | null
-    createdAt: Date | string
-    updatedAt: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type AccountCreateOrConnectWithoutUserInput = {
@@ -11433,6 +11851,28 @@ export namespace Prisma {
   export type AccountCreateManyUserInputEnvelope = {
     data: AccountCreateManyUserInput | AccountCreateManyUserInput[]
     skipDuplicates?: boolean
+  }
+
+  export type ProgramCreateWithoutUserInput = {
+    name: string
+    description: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    trainingSessions?: TrainingSessionCreateNestedManyWithoutProgramInput
+  }
+
+  export type ProgramUncheckedCreateWithoutUserInput = {
+    id?: number
+    name: string
+    description: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    trainingSessions?: TrainingSessionUncheckedCreateNestedManyWithoutProgramInput
+  }
+
+  export type ProgramCreateOrConnectWithoutUserInput = {
+    where: ProgramWhereUniqueInput
+    create: XOR<ProgramCreateWithoutUserInput, ProgramUncheckedCreateWithoutUserInput>
   }
 
   export type SessionUpsertWithWhereUniqueWithoutUserInput = {
@@ -11455,7 +11895,7 @@ export namespace Prisma {
     AND?: SessionScalarWhereInput | SessionScalarWhereInput[]
     OR?: SessionScalarWhereInput[]
     NOT?: SessionScalarWhereInput | SessionScalarWhereInput[]
-    id?: StringFilter<"Session"> | string
+    id?: IntFilter<"Session"> | number
     expiresAt?: DateTimeFilter<"Session"> | Date | string
     token?: StringFilter<"Session"> | string
     createdAt?: DateTimeFilter<"Session"> | Date | string
@@ -11500,21 +11940,50 @@ export namespace Prisma {
     updatedAt?: DateTimeFilter<"Account"> | Date | string
   }
 
+  export type ProgramUpsertWithoutUserInput = {
+    update: XOR<ProgramUpdateWithoutUserInput, ProgramUncheckedUpdateWithoutUserInput>
+    create: XOR<ProgramCreateWithoutUserInput, ProgramUncheckedCreateWithoutUserInput>
+    where?: ProgramWhereInput
+  }
+
+  export type ProgramUpdateToOneWithWhereWithoutUserInput = {
+    where?: ProgramWhereInput
+    data: XOR<ProgramUpdateWithoutUserInput, ProgramUncheckedUpdateWithoutUserInput>
+  }
+
+  export type ProgramUpdateWithoutUserInput = {
+    name?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    trainingSessions?: TrainingSessionUpdateManyWithoutProgramNestedInput
+  }
+
+  export type ProgramUncheckedUpdateWithoutUserInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    name?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    trainingSessions?: TrainingSessionUncheckedUpdateManyWithoutProgramNestedInput
+  }
+
   export type TrainingSessionCreateWithoutProgramInput = {
-    id: string
     name: string
+    day: string
     description: string
-    createdAt: Date | string
-    updatedAt: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
     exercises?: ExerciseCreateNestedManyWithoutSessionInput
   }
 
   export type TrainingSessionUncheckedCreateWithoutProgramInput = {
-    id: string
+    id?: number
     name: string
+    day: string
     description: string
-    createdAt: Date | string
-    updatedAt: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
     exercises?: ExerciseUncheckedCreateNestedManyWithoutSessionInput
   }
 
@@ -11526,6 +11995,37 @@ export namespace Prisma {
   export type TrainingSessionCreateManyProgramInputEnvelope = {
     data: TrainingSessionCreateManyProgramInput | TrainingSessionCreateManyProgramInput[]
     skipDuplicates?: boolean
+  }
+
+  export type UserCreateWithoutProgramInput = {
+    id: string
+    name: string
+    email: string
+    emailVerified: boolean
+    image?: string | null
+    createdAt: Date | string
+    updatedAt?: Date | string
+    onboarded?: boolean
+    sessions?: SessionCreateNestedManyWithoutUserInput
+    accounts?: AccountCreateNestedManyWithoutUserInput
+  }
+
+  export type UserUncheckedCreateWithoutProgramInput = {
+    id: string
+    name: string
+    email: string
+    emailVerified: boolean
+    image?: string | null
+    createdAt: Date | string
+    updatedAt?: Date | string
+    onboarded?: boolean
+    sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
+    accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
+  }
+
+  export type UserCreateOrConnectWithoutProgramInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutProgramInput, UserUncheckedCreateWithoutProgramInput>
   }
 
   export type TrainingSessionUpsertWithWhereUniqueWithoutProgramInput = {
@@ -11548,34 +12048,79 @@ export namespace Prisma {
     AND?: TrainingSessionScalarWhereInput | TrainingSessionScalarWhereInput[]
     OR?: TrainingSessionScalarWhereInput[]
     NOT?: TrainingSessionScalarWhereInput | TrainingSessionScalarWhereInput[]
-    id?: StringFilter<"TrainingSession"> | string
+    id?: IntFilter<"TrainingSession"> | number
     name?: StringFilter<"TrainingSession"> | string
+    day?: StringFilter<"TrainingSession"> | string
     description?: StringFilter<"TrainingSession"> | string
     createdAt?: DateTimeFilter<"TrainingSession"> | Date | string
     updatedAt?: DateTimeFilter<"TrainingSession"> | Date | string
-    programId?: StringFilter<"TrainingSession"> | string
+    programId?: IntFilter<"TrainingSession"> | number
+  }
+
+  export type UserUpsertWithoutProgramInput = {
+    update: XOR<UserUpdateWithoutProgramInput, UserUncheckedUpdateWithoutProgramInput>
+    create: XOR<UserCreateWithoutProgramInput, UserUncheckedCreateWithoutProgramInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutProgramInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutProgramInput, UserUncheckedUpdateWithoutProgramInput>
+  }
+
+  export type UserUpdateWithoutProgramInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    emailVerified?: BoolFieldUpdateOperationsInput | boolean
+    image?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    onboarded?: BoolFieldUpdateOperationsInput | boolean
+    sessions?: SessionUpdateManyWithoutUserNestedInput
+    accounts?: AccountUpdateManyWithoutUserNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutProgramInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    emailVerified?: BoolFieldUpdateOperationsInput | boolean
+    image?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    onboarded?: BoolFieldUpdateOperationsInput | boolean
+    sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
+    accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type ExerciseCreateWithoutSessionInput = {
-    id: string
     name: string
     description: string
     sets: number
     reps: number
     weight: number
-    createdAt: Date | string
-    updatedAt: Date | string
+    reason: string
+    sourceBook: string
+    sourcePage: number
+    sourceExcerpt: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type ExerciseUncheckedCreateWithoutSessionInput = {
-    id: string
+    id?: number
     name: string
     description: string
     sets: number
     reps: number
     weight: number
-    createdAt: Date | string
-    updatedAt: Date | string
+    reason: string
+    sourceBook: string
+    sourcePage: number
+    sourceExcerpt: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type ExerciseCreateOrConnectWithoutSessionInput = {
@@ -11589,19 +12134,20 @@ export namespace Prisma {
   }
 
   export type ProgramCreateWithoutTrainingSessionsInput = {
-    id: string
     name: string
     description: string
-    createdAt: Date | string
-    updatedAt: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    user: UserCreateNestedOneWithoutProgramInput
   }
 
   export type ProgramUncheckedCreateWithoutTrainingSessionsInput = {
-    id: string
+    id?: number
     name: string
     description: string
-    createdAt: Date | string
-    updatedAt: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    userId: string
   }
 
   export type ProgramCreateOrConnectWithoutTrainingSessionsInput = {
@@ -11629,15 +12175,19 @@ export namespace Prisma {
     AND?: ExerciseScalarWhereInput | ExerciseScalarWhereInput[]
     OR?: ExerciseScalarWhereInput[]
     NOT?: ExerciseScalarWhereInput | ExerciseScalarWhereInput[]
-    id?: StringFilter<"Exercise"> | string
+    id?: IntFilter<"Exercise"> | number
     name?: StringFilter<"Exercise"> | string
     description?: StringFilter<"Exercise"> | string
     sets?: IntFilter<"Exercise"> | number
     reps?: IntFilter<"Exercise"> | number
     weight?: IntFilter<"Exercise"> | number
+    reason?: StringFilter<"Exercise"> | string
+    sourceBook?: StringFilter<"Exercise"> | string
+    sourcePage?: IntFilter<"Exercise"> | number
+    sourceExcerpt?: StringFilter<"Exercise"> | string
     createdAt?: DateTimeFilter<"Exercise"> | Date | string
     updatedAt?: DateTimeFilter<"Exercise"> | Date | string
-    trainingSessionId?: StringFilter<"Exercise"> | string
+    trainingSessionId?: IntFilter<"Exercise"> | number
   }
 
   export type ProgramUpsertWithoutTrainingSessionsInput = {
@@ -11652,37 +12202,39 @@ export namespace Prisma {
   }
 
   export type ProgramUpdateWithoutTrainingSessionsInput = {
-    id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutProgramNestedInput
   }
 
   export type ProgramUncheckedUpdateWithoutTrainingSessionsInput = {
-    id?: StringFieldUpdateOperationsInput | string
+    id?: IntFieldUpdateOperationsInput | number
     name?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    userId?: StringFieldUpdateOperationsInput | string
   }
 
   export type TrainingSessionCreateWithoutExercisesInput = {
-    id: string
     name: string
+    day: string
     description: string
-    createdAt: Date | string
-    updatedAt: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
     program: ProgramCreateNestedOneWithoutTrainingSessionsInput
   }
 
   export type TrainingSessionUncheckedCreateWithoutExercisesInput = {
-    id: string
+    id?: number
     name: string
+    day: string
     description: string
-    createdAt: Date | string
-    updatedAt: Date | string
-    programId: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    programId: number
   }
 
   export type TrainingSessionCreateOrConnectWithoutExercisesInput = {
@@ -11702,8 +12254,8 @@ export namespace Prisma {
   }
 
   export type TrainingSessionUpdateWithoutExercisesInput = {
-    id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
+    day?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -11711,12 +12263,13 @@ export namespace Prisma {
   }
 
   export type TrainingSessionUncheckedUpdateWithoutExercisesInput = {
-    id?: StringFieldUpdateOperationsInput | string
+    id?: IntFieldUpdateOperationsInput | number
     name?: StringFieldUpdateOperationsInput | string
+    day?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    programId?: StringFieldUpdateOperationsInput | string
+    programId?: IntFieldUpdateOperationsInput | number
   }
 
   export type UserCreateWithoutSessionsInput = {
@@ -11726,9 +12279,10 @@ export namespace Prisma {
     emailVerified: boolean
     image?: string | null
     createdAt: Date | string
-    updatedAt: Date | string
+    updatedAt?: Date | string
     onboarded?: boolean
     accounts?: AccountCreateNestedManyWithoutUserInput
+    program?: ProgramCreateNestedOneWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutSessionsInput = {
@@ -11738,9 +12292,10 @@ export namespace Prisma {
     emailVerified: boolean
     image?: string | null
     createdAt: Date | string
-    updatedAt: Date | string
+    updatedAt?: Date | string
     onboarded?: boolean
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
+    program?: ProgramUncheckedCreateNestedOneWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutSessionsInput = {
@@ -11769,6 +12324,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     onboarded?: BoolFieldUpdateOperationsInput | boolean
     accounts?: AccountUpdateManyWithoutUserNestedInput
+    program?: ProgramUpdateOneWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutSessionsInput = {
@@ -11781,6 +12337,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     onboarded?: BoolFieldUpdateOperationsInput | boolean
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
+    program?: ProgramUncheckedUpdateOneWithoutUserNestedInput
   }
 
   export type UserCreateWithoutAccountsInput = {
@@ -11790,9 +12347,10 @@ export namespace Prisma {
     emailVerified: boolean
     image?: string | null
     createdAt: Date | string
-    updatedAt: Date | string
+    updatedAt?: Date | string
     onboarded?: boolean
     sessions?: SessionCreateNestedManyWithoutUserInput
+    program?: ProgramCreateNestedOneWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutAccountsInput = {
@@ -11802,9 +12360,10 @@ export namespace Prisma {
     emailVerified: boolean
     image?: string | null
     createdAt: Date | string
-    updatedAt: Date | string
+    updatedAt?: Date | string
     onboarded?: boolean
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
+    program?: ProgramUncheckedCreateNestedOneWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutAccountsInput = {
@@ -11833,6 +12392,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     onboarded?: BoolFieldUpdateOperationsInput | boolean
     sessions?: SessionUpdateManyWithoutUserNestedInput
+    program?: ProgramUpdateOneWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutAccountsInput = {
@@ -11845,10 +12405,11 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     onboarded?: BoolFieldUpdateOperationsInput | boolean
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
+    program?: ProgramUncheckedUpdateOneWithoutUserNestedInput
   }
 
   export type SessionCreateManyUserInput = {
-    id: string
+    id?: number
     expiresAt: Date | string
     token: string
     createdAt: Date | string
@@ -11868,12 +12429,11 @@ export namespace Prisma {
     refreshTokenExpiresAt?: Date | string | null
     scope?: string | null
     password?: string | null
-    createdAt: Date | string
-    updatedAt: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type SessionUpdateWithoutUserInput = {
-    id?: StringFieldUpdateOperationsInput | string
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     token?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -11883,7 +12443,7 @@ export namespace Prisma {
   }
 
   export type SessionUncheckedUpdateWithoutUserInput = {
-    id?: StringFieldUpdateOperationsInput | string
+    id?: IntFieldUpdateOperationsInput | number
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     token?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -11893,7 +12453,7 @@ export namespace Prisma {
   }
 
   export type SessionUncheckedUpdateManyWithoutUserInput = {
-    id?: StringFieldUpdateOperationsInput | string
+    id?: IntFieldUpdateOperationsInput | number
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     token?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -11948,16 +12508,17 @@ export namespace Prisma {
   }
 
   export type TrainingSessionCreateManyProgramInput = {
-    id: string
+    id?: number
     name: string
+    day: string
     description: string
-    createdAt: Date | string
-    updatedAt: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type TrainingSessionUpdateWithoutProgramInput = {
-    id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
+    day?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -11965,8 +12526,9 @@ export namespace Prisma {
   }
 
   export type TrainingSessionUncheckedUpdateWithoutProgramInput = {
-    id?: StringFieldUpdateOperationsInput | string
+    id?: IntFieldUpdateOperationsInput | number
     name?: StringFieldUpdateOperationsInput | string
+    day?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -11974,53 +12536,69 @@ export namespace Prisma {
   }
 
   export type TrainingSessionUncheckedUpdateManyWithoutProgramInput = {
-    id?: StringFieldUpdateOperationsInput | string
+    id?: IntFieldUpdateOperationsInput | number
     name?: StringFieldUpdateOperationsInput | string
+    day?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type ExerciseCreateManySessionInput = {
-    id: string
+    id?: number
     name: string
     description: string
     sets: number
     reps: number
     weight: number
-    createdAt: Date | string
-    updatedAt: Date | string
+    reason: string
+    sourceBook: string
+    sourcePage: number
+    sourceExcerpt: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type ExerciseUpdateWithoutSessionInput = {
-    id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
     sets?: IntFieldUpdateOperationsInput | number
     reps?: IntFieldUpdateOperationsInput | number
     weight?: IntFieldUpdateOperationsInput | number
+    reason?: StringFieldUpdateOperationsInput | string
+    sourceBook?: StringFieldUpdateOperationsInput | string
+    sourcePage?: IntFieldUpdateOperationsInput | number
+    sourceExcerpt?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type ExerciseUncheckedUpdateWithoutSessionInput = {
-    id?: StringFieldUpdateOperationsInput | string
+    id?: IntFieldUpdateOperationsInput | number
     name?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
     sets?: IntFieldUpdateOperationsInput | number
     reps?: IntFieldUpdateOperationsInput | number
     weight?: IntFieldUpdateOperationsInput | number
+    reason?: StringFieldUpdateOperationsInput | string
+    sourceBook?: StringFieldUpdateOperationsInput | string
+    sourcePage?: IntFieldUpdateOperationsInput | number
+    sourceExcerpt?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type ExerciseUncheckedUpdateManyWithoutSessionInput = {
-    id?: StringFieldUpdateOperationsInput | string
+    id?: IntFieldUpdateOperationsInput | number
     name?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
     sets?: IntFieldUpdateOperationsInput | number
     reps?: IntFieldUpdateOperationsInput | number
     weight?: IntFieldUpdateOperationsInput | number
+    reason?: StringFieldUpdateOperationsInput | string
+    sourceBook?: StringFieldUpdateOperationsInput | string
+    sourcePage?: IntFieldUpdateOperationsInput | number
+    sourceExcerpt?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }

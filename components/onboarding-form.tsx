@@ -17,7 +17,7 @@ import * as bodyPix from '@tensorflow-models/body-pix'
 import '@tensorflow/tfjs-core'
 import '@tensorflow/tfjs-backend-webgl'
 import '@mediapipe/selfie_segmentation'
-import { getDistance } from '@/lib/utils'
+import { average, getAverageDistance, getDistance } from '@/lib/utils'
 import { Keypoint } from '@tensorflow-models/body-pix/dist/types'
 
 const formSchema = z.object({
@@ -31,9 +31,9 @@ const formSchema = z.object({
     'split',
     'none',
   ]),
-  humerusToRadius: z.number().min(0).max(2),
-  femurToTibia: z.number().min(0).max(2),
-  torsoToLegs: z.number().min(0).max(2),
+  arm: z.number().min(0).max(2),
+  leg: z.number().min(0).max(2),
+  torso: z.number().min(0).max(2),
 })
 
 export type OnBoardingSchema = z.infer<typeof formSchema>
@@ -87,15 +87,19 @@ export default function OnboardingForm() {
   const webcamRef = useRef<Webcam>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [measurementArm, setMeasurementArm] = useState<number[]>([])
+  const [measurementLeg, setMeasurementLeg] = useState<number[]>([])
+  const [measurementTorso, setMeasurementTorso] = useState<number[]>([])
 
-  const detect = async (model: bodyPix.BodyPix) => {
+  const detect = async (
+    model: bodyPix.BodyPix,
+    pushMeasurement: (val: number) => void
+  ) => {
     if (
       typeof webcamRef.current !== 'undefined' &&
       webcamRef.current !== null &&
       webcamRef.current.video?.readyState === 4 &&
       canvasRef.current
     ) {
-      // Get Video Properties
       const video = webcamRef.current.video
       const videoWidth = webcamRef.current.video.videoWidth
       const videoHeight = webcamRef.current.video.videoHeight
@@ -113,22 +117,20 @@ export default function OnboardingForm() {
       })
 
       const canvas = canvasRef.current
-
       if (model && canvas) {
-        // console.log(partSegmentation?.allPoses[0]?.keypoints)
         const ctx = canvas.getContext('2d')
         if (ctx)
           partSegmentation?.allPoses[0]?.keypoints.map((pos) => {
             ctx.fillStyle = 'red'
             ctx.fillRect(pos.position.x, pos.position.y, 5, 5)
           })
+
         if (partSegmentation?.allPoses[0]?.keypoints) {
           const keypoints = partSegmentation.allPoses[0].keypoints
-          const parts = keypoints.map((key) => {
-            return key.part
-          })
+          const parts = keypoints.map((key) => key.part)
 
           if (
+            currentStep === 4 &&
             ['leftShoulder', 'leftElbow', 'leftWrist'].every((v) =>
               parts.includes(v)
             )
@@ -138,7 +140,6 @@ export default function OnboardingForm() {
             )
             const leftElbow = keypoints.find((k) => k.part === 'leftElbow')
             const leftWrist = keypoints.find((k) => k.part === 'leftWrist')
-
             if (
               leftShoulder!.score > 0.9 &&
               leftElbow!.score > 0.9 &&
@@ -150,61 +151,131 @@ export default function OnboardingForm() {
                 leftElbow!.position.x,
                 leftElbow!.position.y
               )
-              //  27 / 25 = 1.08
-              //
-
               const secondDistance = getDistance(
                 leftWrist!.position.x,
                 leftWrist!.position.y,
                 leftElbow!.position.x,
                 leftElbow!.position.y
               )
-              // console.log('firstDistance = ', firstDistance)
-              // console.log('secondDistance = ', secondDistance)
-              // measurementArm.push(firstDistance / secondDistance)
-              // console.log(measurementArm)
-
-              return firstDistance / secondDistance
-              // console.log('distance = ', firstDistance / secondDistance)
+              const ratio = firstDistance / secondDistance
+              pushMeasurement(ratio)
             }
+          }
 
-            // TODO : Il faut que je prenne 1000 mesures, je fais une moyenne puis je set le rapport (indiquer au user qu'il ne doit pas bouger pendant la mesure)
+          if (
+            currentStep === 5 &&
+            [
+              'leftHip',
+              'leftKnee',
+              'leftAnkle',
+              'rightHip',
+              'rightKnee',
+              'rightAnkle',
+            ].every((v) => parts.includes(v))
+          ) {
+            const leftHip = keypoints.find((k) => k.part === 'leftHip')
+            const leftKnee = keypoints.find((k) => k.part === 'leftKnee')
+            const leftAnkle = keypoints.find((k) => k.part === 'leftAnkle')
+            const rightHip = keypoints.find((k) => k.part === 'rightHip')
+            const rightKnee = keypoints.find((k) => k.part === 'rightKnee')
+            const rightAnkle = keypoints.find((k) => k.part === 'rightAnkle')
+
+            if (
+              leftHip!.score > 0.7 &&
+              leftKnee!.score > 0.7 &&
+              leftAnkle!.score > 0.7 &&
+              rightHip!.score > 0.7 &&
+              rightKnee!.score > 0.7 &&
+              rightAnkle!.score > 0.7
+            ) {
+              console.log('iccii')
+              const leftLeg =
+                getAverageDistance(leftHip!.position, leftKnee!.position) +
+                getAverageDistance(leftKnee!.position, leftAnkle!.position)
+              const rightLeg =
+                getAverageDistance(rightHip!.position, rightKnee!.position) +
+                getAverageDistance(rightKnee!.position, rightAnkle!.position)
+              const ratio = (leftLeg + rightLeg) / 2
+              pushMeasurement(ratio) // ← On push ici
+            }
+          }
+
+          if (
+            currentStep === 6 &&
+            ['leftShoulder', 'leftHip', 'rightShoulder', 'rightHip'].every(
+              (v) => parts.includes(v)
+            )
+          ) {
+            const leftShoulder = keypoints.find(
+              (k) => k.part === 'leftShoulder'
+            )
+            const leftHip = keypoints.find((k) => k.part === 'leftHip')
+            const rightShoulder = keypoints.find(
+              (k) => k.part === 'rightShoulder'
+            )
+            const rightHip = keypoints.find((k) => k.part === 'rightHip')
+
+            if (
+              leftShoulder!.score > 0.9 &&
+              leftHip!.score > 0.9 &&
+              rightShoulder!.score > 0.9 &&
+              rightHip!.score > 0.9
+            ) {
+              const leftTorso = getAverageDistance(
+                leftShoulder!.position,
+                leftHip!.position
+              )
+              const rightTorso = getAverageDistance(
+                rightShoulder!.position,
+                rightHip!.position
+              )
+              const ratio = (leftTorso + rightTorso) / 2
+              pushMeasurement(ratio)
+            }
           }
         }
       }
     }
-    return 0
   }
-
-  useEffect(() => {
-    console.log(measurementArm)
-  }, [measurementArm])
 
   const intervalIdRef = useRef<NodeJS.Timeout | null>(null)
   const modelRef = useRef<bodyPix.BodyPix | null>(null)
 
   const loadModel = async () => {
-    if (!modelRef.current) {
-      modelRef.current = await bodyPix.load()
-      console.log('Model loaded')
-    } else {
-      console.log('Model already loaded')
-    }
+    if (!modelRef.current) modelRef.current = await bodyPix.load()
   }
 
   const runBodysegment = async () => {
     await loadModel()
     intervalIdRef.current = setInterval(async () => {
       if (modelRef.current) {
-        const res = await detect(modelRef.current)
-        console.log(res)
-        const copy = measurementArm
-        setMeasurementArm([...copy, res])
+        const tempArm = []
+        const tempLeg = []
+        const tempTorso = []
+        await detect(modelRef.current, (ratio: number) => {
+          if (currentStep === 4 && tempArm.length < 100) {
+            tempArm.push(ratio)
+            setMeasurementArm((prev) => [...prev, ratio])
+          }
+
+          if (currentStep === 5 && tempLeg.length < 100) {
+            tempLeg.push(ratio)
+            setMeasurementLeg((prev) => [...prev, ratio])
+          }
+          if (currentStep === 6 && tempTorso.length < 100) {
+            tempTorso.push(ratio)
+            setMeasurementTorso((prev) => [...prev, ratio])
+          }
+        })
       }
-    }, 10)
+    }, 100)
   }
   useEffect(() => {
-    if (currentStep === 4 && webcamRef.current && canvasRef.current) {
+    if (
+      (currentStep === 4 || currentStep === 5 || currentStep === 6) &&
+      webcamRef.current &&
+      canvasRef.current
+    ) {
       runBodysegment()
     } else {
       if (intervalIdRef.current) {
@@ -221,9 +292,9 @@ export default function OnboardingForm() {
       dayAvailable: [],
       objective: undefined,
       programPreferences: undefined,
-      humerusToRadius: 0,
-      femurToTibia: 0,
-      torsoToLegs: 0,
+      arm: 0,
+      leg: 0,
+      torso: 0,
     },
   })
 
@@ -231,7 +302,6 @@ export default function OnboardingForm() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-
     const user = await getUserBySessionAuth()
     // const updated = await updateUser(user.id, {
     //   ...user,
@@ -240,8 +310,16 @@ export default function OnboardingForm() {
     // console.log(updated)
     // if (updated) {
     // router.push('/dashboard')
-    console.log(form.getValues())
-    const program = await generateProgram(form.getValues())
+    form.getValues().arm = average(measurementArm)
+    form.getValues().leg = average(measurementLeg)
+    form.getValues().torso = average(measurementTorso)
+
+    const program = await generateProgram({
+      ...form.getValues(),
+      arm: average(measurementArm),
+      leg: average(measurementLeg),
+      torso: average(measurementTorso),
+    })
     console.log(program)
     // }
   }
@@ -418,7 +496,17 @@ export default function OnboardingForm() {
                 </p>
                 {currentStep === 4 && (
                   <p className="text-green-500 text-base">
-                    {measurementArm.length} / 1000
+                    {measurementArm.length} / 100
+                  </p>
+                )}
+                {currentStep === 5 && (
+                  <p className="text-green-500 text-base">
+                    {measurementLeg.length} / 100
+                  </p>
+                )}
+                {currentStep === 6 && (
+                  <p className="text-green-500 text-base">
+                    {measurementTorso.length} / 100
                   </p>
                 )}
 
@@ -438,8 +526,7 @@ export default function OnboardingForm() {
                       width: 320,
                       height: 240,
                       position: 'absolute',
-                      top: '35%',
-                      bottom: '50%',
+                      top: '39.5%',
                     }}
                   />
                 </div>
@@ -486,7 +573,10 @@ export default function OnboardingForm() {
                   (currentStep === 1 &&
                     form.watch('dayAvailable').length === 0) ||
                   (currentStep === 2 && !form.watch('objective')) ||
-                  (currentStep === 3 && !form.watch('programPreferences'))
+                  (currentStep === 3 && !form.watch('programPreferences')) ||
+                  (currentStep === 4 && measurementArm.length < 100) ||
+                  (currentStep === 5 && measurementLeg.length < 100) ||
+                  (currentStep === 6 && measurementTorso.length < 100)
                 }
                 type="button"
                 onClick={() => setCurrentStep(currentStep + 1)}

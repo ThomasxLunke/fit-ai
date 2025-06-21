@@ -21,53 +21,63 @@ model User {
   emailVerified Boolean
   image         String?
   createdAt     DateTime
-  updatedAt     DateTime
+  updatedAt     DateTime @updatedAt
   onboarded     Boolean   @default(false)
   sessions      Session[]
   accounts      Account[]
+  program Program?
 
   @@unique([email])
   @@map("user")
 }
 
 model Program {
-  id String @id
+  id Int @id @default(autoincrement())
   name String
   description String
-  createdAt DateTime
-  updatedAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   trainingSessions TrainingSession[]
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId])
 }
 
 model TrainingSession {
-  id String @id
+  id Int @id @default(autoincrement())
   name String
+  day String
   description String
-  createdAt DateTime
-  updatedAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   exercises Exercise[]
-  programId String
+  programId Int
   program Program @relation(fields: [programId], references: [id], onDelete: Cascade)
 }
 
 model Exercise {
-  id String @id
+  id Int @id @default(autoincrement())
   
   name String
   description String
   sets Int
   reps Int
   weight Int  
+  reason String
+  sourceBook String
+  sourcePage Int
+  sourceExcerpt String
 
-  createdAt DateTime
-  updatedAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  trainingSessionId String
+  trainingSessionId Int
   session TrainingSession @relation(fields: [trainingSessionId], references: [id], onDelete: Cascade)
 }
 
 model Session {
-  id        String   @id
+  id        Int   @id @default(autoincrement())
   expiresAt DateTime
   token     String
   createdAt DateTime
@@ -94,8 +104,8 @@ model Account {
   refreshTokenExpiresAt DateTime?
   scope                 String?
   password              String?
-  createdAt             DateTime
-  updatedAt             DateTime
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   @@map("account")
 }
@@ -105,7 +115,7 @@ model Verification {
   identifier String
   value      String
   expiresAt  DateTime
-  createdAt  DateTime?
+  createdAt  DateTime? 
   updatedAt  DateTime?
 
   @@map("verification")
