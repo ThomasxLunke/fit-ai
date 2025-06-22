@@ -524,7 +524,7 @@ export default function OnboardingForm() {
                       width: 320,
                       height: 240,
                       position: 'absolute',
-                      top: '39.5%',
+                      top: currentStep === 6 ? '39.5%' : '42%',
                     }}
                   />
                 </div>
