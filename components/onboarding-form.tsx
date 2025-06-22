@@ -7,18 +7,16 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { Input } from './ui/input'
 import { Check } from 'lucide-react'
-import { updateUser } from '@/lib/api'
+import { createProgramOnBoarding, updateUser } from '@/lib/api'
 import { getUserBySessionAuth } from '@/app/actions'
 import { useRouter } from 'next/navigation'
 import { generateProgram } from '@/lib/ai'
-import { startWebcam } from '@/lib/webcam'
 import Webcam from 'react-webcam'
 import * as bodyPix from '@tensorflow-models/body-pix'
 import '@tensorflow/tfjs-core'
 import '@tensorflow/tfjs-backend-webgl'
 import '@mediapipe/selfie_segmentation'
 import { average, getAverageDistance, getDistance } from '@/lib/utils'
-import { Keypoint } from '@tensorflow-models/body-pix/dist/types'
 
 const formSchema = z.object({
   sessionPerWeek: z.number().min(1).max(7),
@@ -303,25 +301,25 @@ export default function OnboardingForm() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const user = await getUserBySessionAuth()
-    // const updated = await updateUser(user.id, {
-    //   ...user,
-    //   onboarded: true,
-    // })
-    // console.log(updated)
-    // if (updated) {
-    // router.push('/dashboard')
-    form.getValues().arm = average(measurementArm)
-    form.getValues().leg = average(measurementLeg)
-    form.getValues().torso = average(measurementTorso)
-
     const program = await generateProgram({
       ...form.getValues(),
       arm: average(measurementArm),
       leg: average(measurementLeg),
       torso: average(measurementTorso),
     })
-    console.log(program)
-    // }
+    const createProgram = await createProgramOnBoarding(user.id, program)
+    const updated = await updateUser(user.id, {
+      ...user,
+      onboarded: true,
+    })
+    console.log(updated)
+    if (updated && createProgram) {
+      router.push('/dashboard')
+      form.getValues().arm = average(measurementArm)
+      form.getValues().leg = average(measurementLeg)
+      form.getValues().torso = average(measurementTorso)
+      console.log(program)
+    }
   }
 
   const objectives = [

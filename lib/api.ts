@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { User } from './generated/prisma'
-import { schemaProgram } from './ai'
+import { schemaProgram } from './schema'
 
 const createURL = (path: string) => {
   return window.location.origin + path
@@ -26,7 +26,7 @@ export const createProgramOnBoarding = async (
   userId: string,
   onBoardingProg: z.infer<typeof schemaProgram>
 ) => {
-  const res = await fetch(new Request(createURL('api/program')), {
+  const res = await fetch(new Request(createURL('/api/program')), {
     method: 'POST',
     body: JSON.stringify({ onBoardingProg, userId }),
   })
@@ -35,5 +35,8 @@ export const createProgramOnBoarding = async (
     const data = await res.json()
     console.log('Data', data)
     return data.user
+  } else {
+    const data = await res.json()
+    console.log(data)
   }
 }

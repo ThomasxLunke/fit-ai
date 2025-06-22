@@ -1,39 +1,11 @@
 'use server'
 
 import { OnBoardingSchema } from '@/components/onboarding-form'
-import { z } from 'zod'
 import { PromptTemplate } from '@langchain/core/prompts'
 import { ChatOpenAI } from '@langchain/openai'
 import fetch from 'node-fetch'
+import { schemaProgram } from './schema'
 
-const schemaExercise = z.object({
-  name: z.string(),
-  description: z.string(),
-  sets: z.number(),
-  reps: z.number(),
-  weight: z.number(),
-  justification: z.object({
-    reason: z.string(),
-    source: z.object({
-      book: z.string(),
-      page: z.number(),
-      excerpt: z.string(),
-    }),
-  }),
-})
-
-const schemaTrainingSession = z.object({
-  name: z.string(),
-  day: z.string(),
-  description: z.string(),
-  exercises: z.array(schemaExercise),
-})
-
-export const schemaProgram = z.object({
-  name: z.string(),
-  description: z.string(),
-  trainingSessions: z.array(schemaTrainingSession),
-})
 interface VectorStoreFile {
   id: string
   content: string

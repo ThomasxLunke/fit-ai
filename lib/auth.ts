@@ -34,6 +34,17 @@ export const getUserBySessionAuth = async () => {
       id: session?.user.id,
       email: session?.user.email,
     },
+    include: {
+      program: {
+        include: {
+          trainingSessions: {
+            include: {
+              exercises: true,
+            },
+          },
+        },
+      },
+    },
   })
 
   return user
