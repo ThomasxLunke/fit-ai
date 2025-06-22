@@ -32,7 +32,6 @@ export function LoginForm({
       },
       {
         onSuccess: () => {
-          console.log('success')
           router.push('/dashboard')
         },
         onError: () => {
@@ -91,14 +90,6 @@ export function LoginForm({
               </div>
               <Button type="submit" className="w-full">
                 Se connecter
-              </Button>
-              <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border">
-                <span className="relative z-10 bg-background px-2 text-muted-foreground">
-                  Ou continuez avec
-                </span>
-              </div>
-              <Button variant="outline" className="w-full">
-                Se connecter avec Google
               </Button>
             </div>
             <div className="mt-4 text-center text-sm">

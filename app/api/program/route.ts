@@ -10,8 +10,6 @@ export const POST = async (req: Request) => {
   }: { onBoardingProg: z.infer<typeof schemaProgram>; userId: string } =
     await req.json()
 
-  console.log('userId = ', userId)
-
   const program = await prisma.program.create({
     data: {
       name: onBoardingProg.name,
@@ -19,8 +17,6 @@ export const POST = async (req: Request) => {
       userId: userId,
     },
   })
-
-  console.log(program)
 
   await Promise.all(
     onBoardingProg.trainingSessions.map(async (session) => {

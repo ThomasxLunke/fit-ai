@@ -77,7 +77,7 @@ model Exercise {
 }
 
 model Session {
-  id        Int   @id @default(autoincrement())
+  id        String   @id
   expiresAt DateTime
   token     String
   createdAt DateTime

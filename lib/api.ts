@@ -15,9 +15,7 @@ export const updateUser = async (id: string, userData: User) => {
   )
 
   if (res.ok) {
-    console.log('User updated', res)
     const data = await res.json()
-    console.log('Data', data)
     return data.user
   }
 }
@@ -31,12 +29,7 @@ export const createProgramOnBoarding = async (
     body: JSON.stringify({ onBoardingProg, userId }),
   })
   if (res.ok) {
-    console.log('Program unboarding created', res)
     const data = await res.json()
-    console.log('Data', data)
     return data.user
-  } else {
-    const data = await res.json()
-    console.log(data)
   }
 }

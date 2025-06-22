@@ -3,6 +3,7 @@ import { Calendar } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -10,6 +11,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
+import Signoutbutton from './signout-button'
 
 // Menu items.
 const items = [
@@ -62,6 +64,9 @@ export function SidebarDashboard() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter>
+        <Signoutbutton />
+      </SidebarFooter>
     </Sidebar>
   )
 }

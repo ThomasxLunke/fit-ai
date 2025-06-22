@@ -50,49 +50,30 @@ export const queryVectorStore = async () => {
 
 export const generateProgram = async (onBoarding: OnBoardingSchema) => {
   const context = await queryVectorStore()
-  // console.log('context = ', context)
   const flattenedContext = context.flat() // retire le niveau inutile
   const contextText = flattenedContext.map((file) => file.text).join('\n\n')
-  // console.log('contextText = ', contextText)
-  // console.log(onBoarding)
   const promptTemplate = PromptTemplate.fromTemplate(`
-    Tu es un coach expert en biomécanique, morphoanatomie et optimisation des leviers articulaires, t'appuyant exclusivement sur les ouvrages de référence "Méthode Delavier" de Frédéric Delavier et Michael Gundill.
-    
-    Voici les données morphoanatomiques de l'utilisateur :
-    - Rapport buste/jambe : {torsoLegRatio}
-    - Rapport épaule/coude/coude/poignet : {shoulderElbowToElbowWristRatio}
-    
-    Objectif de l'utilisateur : {objective} son poids.
-    Jours d'entraînement disponibles : {dayAvailable}
-    Nombre de séances par semaine : {sessionPerWeek}
-    Préférences de l'utilisateur pour la programmation : {programPreferences}
-    
-    ⚠️ Tu dois absolument générer exactement {sessionPerWeek} séances distinctes (Push, Pull, Legs), chacune correspondant à un des jours disponibles ({dayAvailable}).
-    ⚠️ Ne jamais générer moins ou plus de séances.
-    
-    Voici un contexte extrait d'ouvrages spécialisés :
-    {context}
-    
-    Ta mission :
-    1. Proposer un programme complet de {sessionPerWeek} séances par semaine en respectant les jours disponibles ({dayAvailable}).
-    2. Chaque séance doit inclure :
-       - Un nom clair
-       - Le jour choisi (issu de {dayAvailable})
-       - Une description concise
-    3. Chaque exercice doit obligatoirement inclure :
-       - Nom
-       - Description
-       - Séries
-       - Répétitions
-       - Poids (0 si inconnu)
-       - Justification morphoanatomique issue du contexte ci-dessus uniquement
-       - Source exacte : Livre, page, extrait cité
-    
-    ⚠️ Tu n'as pas le droit d'inventer des justifications ou des sources qui ne figurent pas dans le contexte fourni.
-    ⚠️ Si aucune justification valide n'est trouvée dans le contexte, supprime cet exercice.
-    
-    Rappel : sois concis mais précis. Ne dépasse jamais le cadre morphoanatomique des ouvrages cités.
-    `)
+Tu es un coach expert en biomécanique, morphoanatomie et optimisation des leviers articulaires.
+Add commentMore actions
+Voici les données morphoanatomiques de l'utilisateur :
+- Rapport de longueur buste/jambe : {torsoLegRatio}
+- Rapport de longueur epaule/coude et coude/poignet : {shoulderElbowToElbowWristRatio}
+
+Objectif de l'utilisateur : {objective} son poids.
+
+Jours d'entraînement disponibles : {dayAvailable}
+Nombre de séances par semaine : {sessionPerWeek}
+
+Préférences de l'utilisateur pour la programmation : {programPreferences}
+
+Voici un contexte extrait d’ouvrages spécialisés :
+{context}
+
+Respecte strictement le schéma suivant :
+→ programme {{ name, description, trainingSessions: [ {{ name, description, day, exercises: [ {{ name, description, sets, reps, weight }} ] }} ] }}
+
+N'utilise aucun exercice qui ne conviendrait pas à la morphologie indiquée. Sois concis mais exhaustif dans les descriptions des mouvements.
+  `)
 
   const prompt = await promptTemplate.format({
     sessionPerWeek: onBoarding.sessionPerWeek,
@@ -110,6 +91,5 @@ export const generateProgram = async (onBoarding: OnBoardingSchema) => {
   }).withStructuredOutput(schemaProgram)
 
   const result = await model.invoke([{ role: 'user', content: prompt }])
-  console.log(result)
   return result
 }

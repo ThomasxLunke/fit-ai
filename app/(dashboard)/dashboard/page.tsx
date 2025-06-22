@@ -8,8 +8,6 @@ import React from 'react'
 
 export default async function page() {
   const user = await getUserBySessionAuth()
-  // const userInfo = await getUserInfo(user.id)
-  console.log(user)
 
   if (!user.onboarded) redirect('/onboarding')
 

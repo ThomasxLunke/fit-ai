@@ -6,7 +6,7 @@ import { Button } from './ui/button'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { Input } from './ui/input'
-import { Check } from 'lucide-react'
+import { Check, Loader2Icon } from 'lucide-react'
 import { createProgramOnBoarding, updateUser } from '@/lib/api'
 import { getUserBySessionAuth } from '@/app/actions'
 import { useRouter } from 'next/navigation'
@@ -59,18 +59,21 @@ export default function OnboardingForm() {
       field: ['programPreferences'],
     },
     {
-      name: 'Mesure du bras',
-      description: 'Quelle est la mesure de votre bras ?',
+      name: 'Mesure du bras gauche',
+      description:
+        'Quelle est la longueur de votre bras gauche ? Présenter votre bras gauche à la caméra.',
       field: ['humerusToRadius'],
     },
     {
-      name: 'Mesure de la cuisse',
-      description: 'Quelle est la mesure de votre cuisse ?',
+      name: 'Mesure de la cuisse gauche',
+      description:
+        'Quelle est la longueur de votre cuisse gauche ? Présenter votre cuisse gauche à la caméra.',
       field: ['femurToTibia'],
     },
     {
       name: 'Mesure de la longueur du torse',
-      description: 'Quelle est la mesure de votre longueur du torse ?',
+      description:
+        'Quelle est la longueur de votre torse ? Présenter votre torse à la caméra.',
       field: ['torsoToLegs'],
     },
     {
@@ -84,6 +87,7 @@ export default function OnboardingForm() {
   const router = useRouter()
   const webcamRef = useRef<Webcam>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [isLoading, setIsLoading] = useState(false)
   const [measurementArm, setMeasurementArm] = useState<number[]>([])
   const [measurementLeg, setMeasurementLeg] = useState<number[]>([])
   const [measurementTorso, setMeasurementTorso] = useState<number[]>([])
@@ -186,7 +190,6 @@ export default function OnboardingForm() {
               rightKnee!.score > 0.7 &&
               rightAnkle!.score > 0.7
             ) {
-              console.log('iccii')
               const leftLeg =
                 getAverageDistance(leftHip!.position, leftKnee!.position) +
                 getAverageDistance(leftKnee!.position, leftAnkle!.position)
@@ -300,6 +303,7 @@ export default function OnboardingForm() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    setIsLoading(true)
     const user = await getUserBySessionAuth()
     const program = await generateProgram({
       ...form.getValues(),
@@ -307,18 +311,14 @@ export default function OnboardingForm() {
       leg: average(measurementLeg),
       torso: average(measurementTorso),
     })
-    const createProgram = await createProgramOnBoarding(user.id, program)
+    await createProgramOnBoarding(user.id, program)
     const updated = await updateUser(user.id, {
       ...user,
       onboarded: true,
     })
-    console.log(updated)
-    if (updated && createProgram) {
+    if (updated) {
       router.push('/dashboard')
-      form.getValues().arm = average(measurementArm)
-      form.getValues().leg = average(measurementLeg)
-      form.getValues().torso = average(measurementTorso)
-      console.log(program)
+      setIsLoading(false)
     }
   }
 
@@ -547,8 +547,12 @@ export default function OnboardingForm() {
                   >
                     Précédent
                   </Button>
-                  <Button type="submit">
-                    <Check />
+                  <Button type="submit" disabled={isLoading}>
+                    {isLoading ? (
+                      <Loader2Icon className="animate-spin" />
+                    ) : (
+                      <Check />
+                    )}
                     Valider
                   </Button>
                 </div>

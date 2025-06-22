@@ -37,7 +37,6 @@ export function SignUpForm({
       },
       {
         onSuccess: () => {
-          console.log('success')
           router.push('/dashboard')
         },
         onError: () => {
