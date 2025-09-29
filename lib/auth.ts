@@ -29,6 +29,8 @@ export const getUserBySessionAuth = async () => {
     headers: await headers(),
   })
 
+  if (!session) throw new Error('userId is required')
+
   const user = await prisma.user.findUniqueOrThrow({
     where: {
       id: session?.user.id,
