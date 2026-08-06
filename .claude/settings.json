@@ -6,7 +6,12 @@
       "Bash(npx prisma *)",
       "Bash(echo \"EXIT=$?\")",
       "Bash(git stash *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(git config *)",
+      "Bash(npm view *)",
+      "Bash(node -e ' *)",
+      "Bash(npm audit *)",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/next/package.json'\\).version\\)\")"
     ]
   }
 }
