@@ -27,22 +27,19 @@ export function SignUpForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const { error } = await authClient.signUp.email(
+    await authClient.signUp.email(
       {
         email: email,
         password: password,
         name: 'test',
         image: 'https://example.com/image.png',
-        onboarded: false,
       },
       {
         onSuccess: () => {
           router.push('/dashboard')
         },
-        onError: () => {
-          if (error?.message) {
-            setError(error?.message)
-          }
+        onError: (ctx) => {
+          setError(ctx.error.message)
         },
       }
     )

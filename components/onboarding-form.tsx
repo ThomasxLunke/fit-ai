@@ -88,6 +88,7 @@ export default function OnboardingForm() {
   const webcamRef = useRef<Webcam>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
   const [measurementArm, setMeasurementArm] = useState<number[]>([])
   const [measurementLeg, setMeasurementLeg] = useState<number[]>([])
   const [measurementTorso, setMeasurementTorso] = useState<number[]>([])
@@ -304,20 +305,30 @@ export default function OnboardingForm() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsLoading(true)
-    const user = await getUserBySessionAuth()
-    const program = await generateProgram({
-      ...form.getValues(),
-      arm: average(measurementArm),
-      leg: average(measurementLeg),
-      torso: average(measurementTorso),
-    })
-    await createProgramOnBoarding(user.id, program)
-    const updated = await updateUser(user.id, {
-      ...user,
-      onboarded: true,
-    })
-    if (updated) {
+    setError('')
+    try {
+      const user = await getUserBySessionAuth()
+      const program = await generateProgram({
+        ...form.getValues(),
+        arm: average(measurementArm),
+        leg: average(measurementLeg),
+        torso: average(measurementTorso),
+      })
+      // On ne marque l'utilisateur comme "onboarded" que si le programme a
+      // bien été créé — sinon il resterait bloqué hors de l'onboarding sans
+      // jamais avoir de programme.
+      await createProgramOnBoarding(user.id, program)
+      await updateUser(user.id, {
+        ...user,
+        onboarded: true,
+      })
       router.push('/dashboard')
+    } catch (err) {
+      setError(
+        "Une erreur est survenue lors de la génération de votre programme. Veuillez réessayer."
+      )
+      console.error(err)
+    } finally {
       setIsLoading(false)
     }
   }
@@ -539,6 +550,9 @@ export default function OnboardingForm() {
                   <p className="text-base text-muted-foreground">
                     {steps[currentStep].description}
                   </p>
+                  {error && (
+                    <p className="text-sm text-red-500 mt-2">{error}</p>
+                  )}
                 </div>
                 <div className="flex justify-between">
                   <Button

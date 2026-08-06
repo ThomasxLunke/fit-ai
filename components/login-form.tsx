@@ -25,7 +25,7 @@ export function LoginForm({
   const router = useRouter()
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const { error } = await authClient.signIn.email(
+    await authClient.signIn.email(
       {
         email: email,
         password: password,
@@ -34,10 +34,8 @@ export function LoginForm({
         onSuccess: () => {
           router.push('/dashboard')
         },
-        onError: () => {
-          if (error?.message) {
-            setError(error?.message)
-          }
+        onError: (ctx) => {
+          setError(ctx.error.message)
         },
       }
     )

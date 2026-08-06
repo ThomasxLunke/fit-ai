@@ -14,10 +14,12 @@ export const updateUser = async (id: string, userData: User) => {
     })
   )
 
-  if (res.ok) {
-    const data = await res.json()
-    return data.user
+  if (!res.ok) {
+    throw new Error(`Échec de la mise à jour de l'utilisateur (${res.status})`)
   }
+
+  const data = await res.json()
+  return data.user
 }
 
 export const createProgramOnBoarding = async (
@@ -28,8 +30,11 @@ export const createProgramOnBoarding = async (
     method: 'POST',
     body: JSON.stringify({ onBoardingProg, userId }),
   })
-  if (res.ok) {
-    const data = await res.json()
-    return data.user
+
+  if (!res.ok) {
+    throw new Error(`Échec de la création du programme (${res.status})`)
   }
+
+  const data = await res.json()
+  return data.program
 }
