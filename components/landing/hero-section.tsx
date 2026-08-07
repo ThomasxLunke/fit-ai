@@ -2,6 +2,11 @@ import { CtaAction } from './cta-action'
 import type { LandingCta } from './cta'
 
 export function HeroSection({ cta }: { cta: LandingCta }) {
+  const heroLabel =
+    cta.primary.href === '/dashboard'
+      ? 'Accéder au dashboard'
+      : 'Mesurer mes segments'
+
   return (
     <div className="lg-wrap lg-hero">
       <div>
@@ -18,7 +23,7 @@ export function HeroSection({ cta }: { cta: LandingCta }) {
         </p>
         <div className="lg-hero-actions">
           <CtaAction className="lg-btn lg-btn-primary" link={cta.primary}>
-            Mesurer mes segments →
+            {heroLabel} →
           </CtaAction>
           <a className="lg-btn lg-btn-ghost" href="#comment">
             Voir comment ça marche

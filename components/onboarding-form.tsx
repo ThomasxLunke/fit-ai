@@ -6,11 +6,8 @@ import { Button } from './ui/button'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { Input } from './ui/input'
-import { Check, Loader2Icon } from 'lucide-react'
-import { createProgramOnBoarding, updateUser } from '@/lib/api'
-import { getUserBySessionAuth } from '@/app/actions'
+import { Check, Lock } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { generateProgram } from '@/lib/ai'
 import Webcam from 'react-webcam'
 import * as bodyPix from '@tensorflow-models/body-pix'
 import '@tensorflow/tfjs-core'
@@ -90,8 +87,6 @@ export default function OnboardingForm() {
   const router = useRouter()
   const webcamRef = useRef<Webcam>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState('')
   const [measurementArm, setMeasurementArm] = useState<number[]>([])
   const [measurementLeg, setMeasurementLeg] = useState<number[]>([])
   const [measurementTorso, setMeasurementTorso] = useState<number[]>([])
@@ -305,35 +300,21 @@ export default function OnboardingForm() {
 
   const { setValue } = form
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    setIsLoading(true)
-    setError('')
-    try {
-      const user = await getUserBySessionAuth()
-      const program = await generateProgram({
-        ...form.getValues(),
-        arm: average(measurementArm),
-        leg: average(measurementLeg),
-        torso: average(measurementTorso),
-      })
-      // On ne marque l'utilisateur comme "onboarded" que si le programme a
-      // bien été créé — sinon il resterait bloqué hors de l'onboarding sans
-      // jamais avoir de programme.
-      await createProgramOnBoarding(user.id, program)
-      await updateUser(user.id, {
-        ...user,
-        onboarded: true,
-      })
-      router.push('/dashboard')
-    } catch (err) {
-      setError(
-        "Une erreur est survenue lors de la génération de votre programme. Veuillez réessayer."
-      )
-      console.error(err)
-    } finally {
-      setIsLoading(false)
+    // The actual generation (generateProgram + persistence) no longer runs
+    // here — it's kicked off by ProgramGenerationLoader once we land on
+    // /dashboard, so "Valider" navigates immediately instead of leaving the
+    // user waiting on this last wizard screen. The payload travels via
+    // sessionStorage since it won't fit cleanly in a URL.
+    const payload: OnBoardingSchema = {
+      ...form.getValues(),
+      arm: average(measurementArm),
+      leg: average(measurementLeg),
+      torso: average(measurementTorso),
     }
+    sessionStorage.setItem('fitai:onboarding-payload', JSON.stringify(payload))
+    router.push('/dashboard?generating=1')
   }
 
   const objectives = [
@@ -524,6 +505,14 @@ export default function OnboardingForm() {
                     </div>
                   </div>
                 </div>
+
+                <div className="lg-trust-line">
+                  <Lock className="h-3.5 w-3.5" />
+                  Aucune image ni vidéo n&apos;est enregistrée ou envoyée à un
+                  serveur — le traitement s&apos;exécute entièrement dans
+                  votre navigateur, seuls les ratios calculés (des nombres)
+                  sont conservés.
+                </div>
               </div>
             )}
             {currentStep === 7 && (
@@ -531,9 +520,6 @@ export default function OnboardingForm() {
                 <div className="lg-step-head">
                   <h1 className="text-3xl">{steps[currentStep].name}</h1>
                   <p>{steps[currentStep].description}</p>
-                  {error && (
-                    <p className="text-sm text-red-500 mt-2">{error}</p>
-                  )}
                 </div>
                 <div className="lg-wizard-actions">
                   <Button
@@ -542,12 +528,8 @@ export default function OnboardingForm() {
                   >
                     Précédent
                   </Button>
-                  <Button type="submit" disabled={isLoading}>
-                    {isLoading ? (
-                      <Loader2Icon className="animate-spin" />
-                    ) : (
-                      <Check />
-                    )}
+                  <Button type="submit">
+                    <Check />
                     Valider
                   </Button>
                 </div>
