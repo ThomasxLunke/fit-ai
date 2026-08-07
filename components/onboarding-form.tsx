@@ -17,6 +17,9 @@ import '@tensorflow/tfjs-core'
 import '@tensorflow/tfjs-backend-webgl'
 import '@mediapipe/selfie_segmentation'
 import { average, getAverageDistance, getDistance } from '@/lib/utils'
+import { StepProgress } from '@/components/onboarding/step-progress'
+import { CameraPanel } from '@/components/onboarding/camera-panel'
+import { PoseGuide, type PoseHighlight } from '@/components/onboarding/pose-guide'
 
 const formSchema = z.object({
   sessionPerWeek: z.number().min(1).max(7),
@@ -61,19 +64,19 @@ export default function OnboardingForm() {
     {
       name: 'Mesure du bras gauche',
       description:
-        'Quelle est la longueur de votre bras gauche ? Présenter votre bras gauche à la caméra.',
+        'Positionnez votre bras gauche à angle droit devant vous, comme sur le schéma, et présentez-le à la caméra.',
       field: ['humerusToRadius'],
     },
     {
-      name: 'Mesure de la cuisse gauche',
+      name: 'Mesure des jambes',
       description:
-        'Quelle est la longueur de votre cuisse gauche ? Présenter votre cuisse gauche à la caméra.',
+        'Reculez-vous pour que vos deux jambes soient visibles en entier, debout et face à la caméra.',
       field: ['femurToTibia'],
     },
     {
-      name: 'Mesure de la longueur du torse',
+      name: 'Mesure du buste',
       description:
-        'Quelle est la longueur de votre torse ? Présenter votre torse à la caméra.',
+        'Restez dans la même position, bras relâchés le long du corps, face à la caméra.',
       field: ['torsoToLegs'],
     },
     {
@@ -357,23 +360,34 @@ export default function OnboardingForm() {
     { value: 7, label: 'Dimanche' },
   ]
 
+  const poseHighlight: PoseHighlight =
+    currentStep === 4 ? 'left-arm' : currentStep === 5 ? 'legs' : 'torso'
+  const measuredSegmentLabel =
+    currentStep === 4
+      ? 'bras gauche'
+      : currentStep === 5
+        ? 'jambes (gauche + droite)'
+        : 'buste (gauche + droite)'
+  const sampleCount =
+    currentStep === 4
+      ? measurementArm.length
+      : currentStep === 5
+        ? measurementLeg.length
+        : measurementTorso.length
+
   return (
-    <div className="h-full w-full flex justify-center items-center">
-      <div className="w-[600px] h-[500px] border rounded-lg p-4">
-        <form
-          className="w-full h-full flex flex-col justify-between"
-          onSubmit={handleSubmit}
-        >
-          <div className="h-full flex flex-col justify-between">
+    <div className="lg-wrap">
+      <StepProgress current={currentStep} total={steps.length} />
+
+      <div className="lg-panel lg-wizard-shell">
+        <span className="lg-br" />
+        <form className="flex flex-col gap-8" onSubmit={handleSubmit}>
+          <div className="flex flex-col gap-8">
             {currentStep === 0 && (
               <div className="flex flex-col gap-4">
-                <div>
-                  <h1 className="text-3xl font-bold tracking-tight">
-                    {steps[currentStep].name}
-                  </h1>
-                  <p className="text-base text-muted-foreground">
-                    {steps[currentStep].description}
-                  </p>
+                <div className="lg-step-head">
+                  <h1 className="text-3xl">{steps[currentStep].name}</h1>
+                  <p>{steps[currentStep].description}</p>
                 </div>
                 <div className="flex flex-col gap-4">
                   <Input
@@ -386,13 +400,9 @@ export default function OnboardingForm() {
             )}
             {currentStep === 1 && (
               <div className="flex flex-col gap-4">
-                <div>
-                  <h1 className="text-3xl font-bold tracking-tight">
-                    {steps[currentStep].name}
-                  </h1>
-                  <p className="text-base text-muted-foreground">
-                    {steps[currentStep].description}
-                  </p>
+                <div className="lg-step-head">
+                  <h1 className="text-3xl">{steps[currentStep].name}</h1>
+                  <p>{steps[currentStep].description}</p>
                 </div>
                 <div className="flex flex-col gap-4 flex-wrap">
                   {days.map((day) => (
@@ -423,13 +433,9 @@ export default function OnboardingForm() {
             )}
             {currentStep === 2 && (
               <div className="flex flex-col gap-4">
-                <div>
-                  <h1 className="text-3xl font-bold tracking-tight">
-                    {steps[currentStep].name}
-                  </h1>
-                  <p className="text-base text-muted-foreground">
-                    {steps[currentStep].description}
-                  </p>
+                <div className="lg-step-head">
+                  <h1 className="text-3xl">{steps[currentStep].name}</h1>
+                  <p>{steps[currentStep].description}</p>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4">
@@ -458,13 +464,9 @@ export default function OnboardingForm() {
             )}
             {currentStep === 3 && (
               <div className="flex flex-col gap-4">
-                <div>
-                  <h1 className="text-3xl font-bold tracking-tight">
-                    {steps[currentStep].name}
-                  </h1>
-                  <p className="text-base text-muted-foreground">
-                    {steps[currentStep].description}
-                  </p>
+                <div className="lg-step-head">
+                  <h1 className="text-3xl">{steps[currentStep].name}</h1>
+                  <p>{steps[currentStep].description}</p>
                 </div>
                 <div className="grid grid-cols-1 gap-4">
                   {programs.map((prog) => (
@@ -497,64 +499,43 @@ export default function OnboardingForm() {
             )}
             {[4, 5, 6].includes(currentStep) && (
               <div className="flex flex-col gap-4">
-                <h1 className="text-3xl font-bold tracking-tight">
-                  {steps[currentStep].name}
-                </h1>
-                <p className="text-base text-muted-foreground">
-                  {steps[currentStep].description}
-                </p>
-                {currentStep === 4 && (
-                  <p className="text-green-500 text-base">
-                    {measurementArm.length} / 100
-                  </p>
-                )}
-                {currentStep === 5 && (
-                  <p className="text-green-500 text-base">
-                    {measurementLeg.length} / 100
-                  </p>
-                )}
-                {currentStep === 6 && (
-                  <p className="text-green-500 text-base">
-                    {measurementTorso.length} / 100
-                  </p>
-                )}
+                <div className="lg-step-head">
+                  <div className="lg-eyebrow">mesure_caméra</div>
+                  <h2>{steps[currentStep].name}</h2>
+                  <p>{steps[currentStep].description}</p>
+                </div>
 
-                <div className="flex w-full h-fit flex-col justify-center items-center">
-                  <Webcam
-                    id="webcam"
-                    ref={webcamRef}
-                    style={{
-                      width: 320,
-                      height: 240,
-                      position: 'relative',
-                    }}
+                <div className="lg-camera-guide-row">
+                  <CameraPanel
+                    webcamRef={webcamRef}
+                    canvasRef={canvasRef}
+                    sampleCount={sampleCount}
                   />
-                  <canvas
-                    ref={canvasRef}
-                    style={{
-                      width: 320,
-                      height: 240,
-                      position: 'absolute',
-                      top: currentStep === 6 ? '39.5%' : '42%',
-                    }}
-                  />
+                  <div className="lg-panel lg-pose-panel">
+                    <span className="lg-br" />
+                    <div className="lg-camera-head">
+                      <span className="lg-mono">POSE_GUIDE.RÉFÉRENCE</span>
+                    </div>
+                    <div className="lg-guide-stage">
+                      <PoseGuide highlight={poseHighlight} />
+                    </div>
+                    <div className="lg-pose-label lg-mono">
+                      Segment mesuré&nbsp;: <b>{measuredSegmentLabel}</b>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
             {currentStep === 7 && (
-              <div className="h-full flex flex-col justify-between">
-                <div>
-                  <h1 className="text-3xl font-bold tracking-tight">
-                    {steps[currentStep].name}
-                  </h1>
-                  <p className="text-base text-muted-foreground">
-                    {steps[currentStep].description}
-                  </p>
+              <div className="flex flex-col gap-4">
+                <div className="lg-step-head">
+                  <h1 className="text-3xl">{steps[currentStep].name}</h1>
+                  <p>{steps[currentStep].description}</p>
                   {error && (
                     <p className="text-sm text-red-500 mt-2">{error}</p>
                   )}
                 </div>
-                <div className="flex justify-between">
+                <div className="lg-wizard-actions">
                   <Button
                     type="button"
                     onClick={() => setCurrentStep(currentStep - 1)}
@@ -575,7 +556,7 @@ export default function OnboardingForm() {
           </div>
 
           {currentStep !== 7 && (
-            <div className="flex justify-between">
+            <div className="lg-wizard-actions">
               <Button
                 disabled={currentStep === 0}
                 type="button"

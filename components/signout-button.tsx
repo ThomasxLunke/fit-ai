@@ -12,7 +12,7 @@ export default function Signoutbutton() {
       variant="destructive"
       onClick={() => {
         authClient.signOut().then(() => {
-          router.push('sign-in')
+          router.push('/')
         })
       }}
     >
