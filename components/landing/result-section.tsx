@@ -19,7 +19,7 @@ export function ResultSection() {
         <div className="lg-panel">
           <span className="lg-br" />
           <div className="lg-spec-sheet-head">
-            <span>EXERCICE_04.JSON</span>
+            <span>EXERCICE_04</span>
             <span>validé ✓</span>
           </div>
           <div className="lg-spec-row">
