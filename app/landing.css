@@ -1,0 +1,850 @@
+/*
+ * "Mesure & Précision" design system — deliberately scoped under
+ * `.landing-scope` with its own token set (`--lg-*`) instead of touching the
+ * shared shadcn tokens in globals.css. Used by the landing page (`/`), the
+ * auth dialog, and the onboarding wizard (`/onboarding`) — the dashboard
+ * keeps the app's normal zinc theme untouched (that route never opts into
+ * this class).
+ *
+ * Dark mode follows the app's existing convention: next-themes toggles a
+ * `.dark` class on <html> (see app/layout.tsx, attribute="class") — so dark
+ * overrides live under `.dark .landing-scope`, matching how app/globals.css
+ * itself handles `.dark`.
+ */
+
+.landing-scope {
+  --lg-bg: #f3f5f8;
+  --lg-surface: #ffffff;
+  --lg-text: #141821;
+  --lg-muted: #5b6472;
+  --lg-border: #dde2e9;
+  --lg-amber: #b5661e;
+  --lg-cyan: #1d7a87;
+  --lg-amber-soft: rgba(181, 102, 30, 0.1);
+  --lg-cyan-soft: rgba(29, 122, 135, 0.1);
+
+  background: var(--lg-bg);
+  color: var(--lg-text);
+  font-family: var(--font-plex-sans), system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  isolation: isolate;
+}
+/*
+ * NOTE: no `position` here on purpose. `.landing-scope` is reused as a
+ * token-scope on the auth dialog's `DialogContent` (see auth-dialog.tsx) so
+ * it inherits the same colors/fonts — and DialogContent needs to stay
+ * `fixed` (Tailwind). A plain-CSS `position: relative` here would have the
+ * same specificity as Tailwind's `.fixed` utility and could win the
+ * cascade, silently knocking the dialog out of its centered/fixed position.
+ * The page root gets `position: relative` inline via Tailwind's `relative`
+ * class instead (see app/page.tsx).
+ */
+
+/*
+ * Let mouse events reach the animated grid background wherever there's
+ * nothing solid on top of it. `pointer-events` is inherited, so turning it
+ * off here and re-enabling it only on actual surfaces (links, buttons,
+ * cards, panels) means hovering empty space — margins, section padding,
+ * gaps between cards — hits the canvas underneath instead of being
+ * swallowed by an invisible content box.
+ */
+.landing-scope {
+  pointer-events: none;
+}
+.landing-scope .lg-grid-bg,
+.landing-scope a,
+.landing-scope button,
+.landing-scope .lg-card,
+.landing-scope .lg-panel,
+.landing-scope .lg-chip {
+  pointer-events: auto;
+}
+/* The auth dialog carries `.landing-scope` directly on its DialogContent
+   (see components/landing/auth-dialog.tsx) to pick up these tokens — reset
+   pointer-events on that same element (no space: it's one element with both
+   the class and the data-slot, not an ancestor/descendant pair) so its
+   inputs/buttons stay clickable. */
+.landing-scope[data-slot='dialog-content'] {
+  pointer-events: auto;
+}
+
+.dark .landing-scope {
+  --lg-bg: #0b0e14;
+  --lg-surface: #12161f;
+  --lg-text: #e8eaed;
+  --lg-muted: #8a93a3;
+  --lg-border: #232936;
+  --lg-amber: #e8963b;
+  --lg-cyan: #4fb6c4;
+  --lg-amber-soft: rgba(232, 150, 59, 0.12);
+  --lg-cyan-soft: rgba(79, 182, 196, 0.1);
+}
+
+/*
+ * Re-skin shadcn's own primitives (Button, Input, Label, Dialog...) for the
+ * landing page by overriding the same semantic tokens Tailwind's utility
+ * classes already read (bg-primary, border-input, ring-ring, etc.) — see
+ * app/globals.css's `@theme inline` block for the mapping. Scoped under
+ * `.landing-scope`, so the dashboard/onboarding/auth-adjacent pages keep
+ * the app's normal zinc theme untouched.
+ */
+.landing-scope {
+  --background: var(--lg-bg);
+  --foreground: var(--lg-text);
+  --card: var(--lg-surface);
+  --card-foreground: var(--lg-text);
+  --popover: var(--lg-surface);
+  --popover-foreground: var(--lg-text);
+  --primary: var(--lg-amber);
+  --primary-foreground: #14100a;
+  --secondary: var(--lg-border);
+  --secondary-foreground: var(--lg-text);
+  --muted: var(--lg-border);
+  --muted-foreground: var(--lg-muted);
+  --accent: var(--lg-cyan-soft);
+  --accent-foreground: var(--lg-cyan);
+  --border: var(--lg-border);
+  --input: var(--lg-border);
+  --ring: var(--lg-cyan);
+  --radius: 4px;
+}
+
+/* ---- auth dialog ---- */
+.landing-scope .lg-auth-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 4px 0 8px;
+}
+.landing-scope .lg-auth-tab {
+  flex: 1;
+  font-family: var(--font-plex-mono), monospace;
+  font-size: 0.82rem;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--lg-border);
+  background: transparent;
+  color: var(--lg-muted);
+  cursor: pointer;
+}
+.landing-scope .lg-auth-tab[data-active='true'] {
+  background: var(--lg-amber-soft);
+  color: var(--lg-amber);
+  border-color: var(--lg-amber);
+}
+.landing-scope .lg-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.landing-scope .lg-field label {
+  font-family: var(--font-plex-mono), monospace;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--lg-muted);
+}
+
+.landing-scope .lg-wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 28px;
+}
+
+.landing-scope h1,
+.landing-scope h2,
+.landing-scope h3 {
+  font-family: var(--font-big-shoulders), system-ui, sans-serif;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  text-wrap: balance;
+  margin: 0;
+}
+
+.landing-scope .lg-mono {
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.landing-scope .lg-eyebrow {
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: 0.82rem;
+  color: var(--lg-cyan);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.landing-scope .lg-eyebrow::before {
+  content: '//';
+  color: var(--lg-muted);
+}
+
+.landing-scope a {
+  color: inherit;
+}
+
+/* ---- header ---- */
+.landing-scope header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: color-mix(in srgb, var(--lg-bg) 82%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--lg-border);
+}
+.landing-scope .lg-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 0;
+}
+.landing-scope .lg-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-big-shoulders), sans-serif;
+  font-weight: 800;
+  font-size: 1.35rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+}
+.landing-scope .lg-logo .lg-dot {
+  width: 9px;
+  height: 9px;
+  background: var(--lg-amber);
+  border-radius: 1px;
+  transform: rotate(45deg);
+}
+.landing-scope nav.lg-primary-nav {
+  display: flex;
+  gap: 28px;
+}
+.landing-scope nav.lg-primary-nav a {
+  font-family: var(--font-plex-mono), monospace;
+  font-size: 0.8rem;
+  text-decoration: none;
+  color: var(--lg-muted);
+  border-bottom: 1px solid transparent;
+}
+.landing-scope nav.lg-primary-nav a:hover {
+  color: var(--lg-text);
+  border-color: var(--lg-amber);
+}
+.landing-scope .lg-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Both share --lg-control-height so the icon toggle is never a different
+   size than the text buttons next to it (e.g. "Accéder au dashboard"). */
+.landing-scope .lg-icon-btn,
+.landing-scope .lg-btn {
+  --lg-control-height: 44px;
+  height: var(--lg-control-height);
+}
+
+.landing-scope .lg-icon-btn {
+  width: var(--lg-control-height);
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--lg-border);
+  background: var(--lg-surface);
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--lg-text);
+}
+.landing-scope .lg-icon-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.landing-scope .lg-btn {
+  font-family: var(--font-plex-mono), monospace;
+  font-size: 0.82rem;
+  text-decoration: none;
+  padding: 0 18px;
+  border-radius: 8px;
+  border: 1px solid var(--lg-border);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.landing-scope .lg-btn-primary {
+  background: var(--lg-amber);
+  color: #14100a;
+  border-color: var(--lg-amber);
+  font-weight: 600;
+}
+.landing-scope .lg-btn-ghost {
+  background: transparent;
+  color: var(--lg-text);
+}
+.landing-scope .lg-btn-ghost:hover {
+  border-color: var(--lg-text);
+}
+
+/* ---- corner-bracket panel ---- */
+.landing-scope .lg-panel {
+  position: relative;
+  border: 1px solid var(--lg-border);
+  background: var(--lg-surface);
+  border-radius: 4px;
+}
+.landing-scope .lg-panel::before,
+.landing-scope .lg-panel::after,
+.landing-scope .lg-panel .lg-br::before,
+.landing-scope .lg-panel .lg-br::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: var(--lg-amber);
+  border-style: solid;
+  border-width: 0;
+}
+.landing-scope .lg-panel::before {
+  top: -1px;
+  left: -1px;
+  border-top-width: 2px;
+  border-left-width: 2px;
+}
+.landing-scope .lg-panel::after {
+  top: -1px;
+  right: -1px;
+  border-top-width: 2px;
+  border-right-width: 2px;
+}
+.landing-scope .lg-panel .lg-br::before {
+  bottom: -1px;
+  left: -1px;
+  border-bottom-width: 2px;
+  border-left-width: 2px;
+}
+.landing-scope .lg-panel .lg-br::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom-width: 2px;
+  border-right-width: 2px;
+}
+
+/* ---- hero ---- */
+.landing-scope .lg-hero {
+  padding: 84px 0 96px;
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 56px;
+  align-items: center;
+}
+.landing-scope .lg-hero h1 {
+  font-size: clamp(2.4rem, 4.6vw, 3.6rem);
+  line-height: 1.1;
+}
+.landing-scope .lg-hero h1 em {
+  font-style: normal;
+  color: var(--lg-amber);
+}
+.landing-scope .lg-hero p.lg-lead {
+  font-size: 1.08rem;
+  color: var(--lg-muted);
+  max-width: 46ch;
+  margin: 22px 0 30px;
+}
+.landing-scope .lg-hero-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.landing-scope .lg-trust-line {
+  margin-top: 28px;
+  font-family: var(--font-plex-mono), monospace;
+  font-size: 0.76rem;
+  color: var(--lg-muted);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.landing-scope .lg-trust-line .lg-pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--lg-cyan);
+  animation: lg-pulse 2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-scope .lg-trust-line .lg-pulse {
+    animation: none;
+  }
+}
+@keyframes lg-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* ---- hero visual: pose readout ---- */
+.landing-scope .lg-readout {
+  padding: 20px;
+  overflow: hidden;
+}
+.landing-scope .lg-readout-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-plex-mono), monospace;
+  font-size: 0.72rem;
+  color: var(--lg-muted);
+  padding-bottom: 14px;
+  border-bottom: 1px dashed var(--lg-border);
+  margin-bottom: 8px;
+}
+.landing-scope .lg-readout-head .lg-rec {
+  color: var(--lg-cyan);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.landing-scope .lg-readout-head .lg-rec::before {
+  content: '●';
+  animation: lg-pulse 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-scope .lg-readout-head .lg-rec::before {
+    animation: none;
+  }
+}
+.landing-scope .lg-pose-stage {
+  position: relative;
+  height: 320px;
+}
+.landing-scope .lg-scanline {
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--lg-cyan), transparent);
+  animation: lg-scan 4.5s linear infinite;
+  opacity: 0.7;
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-scope .lg-scanline {
+    animation: none;
+    top: 50%;
+  }
+}
+@keyframes lg-scan {
+  0% {
+    top: 4%;
+  }
+  100% {
+    top: 94%;
+  }
+}
+.landing-scope .lg-readout-foot {
+  display: flex;
+  gap: 18px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--lg-border);
+  font-family: var(--font-plex-mono), monospace;
+  font-size: 0.72rem;
+  color: var(--lg-muted);
+  flex-wrap: wrap;
+}
+.landing-scope .lg-readout-foot b {
+  color: var(--lg-amber);
+  font-weight: 600;
+}
+
+/* ---- sections ---- */
+.landing-scope section {
+  padding: 88px 0;
+  position: relative;
+}
+.landing-scope .lg-section-head {
+  max-width: 62ch;
+  margin-bottom: 44px;
+}
+.landing-scope .lg-section-head h2 {
+  font-size: clamp(1.7rem, 3vw, 2.3rem);
+}
+.landing-scope .lg-section-head p {
+  color: var(--lg-muted);
+  margin-top: 14px;
+  font-size: 1.02rem;
+}
+
+.landing-scope .lg-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+.landing-scope .lg-card {
+  background: var(--lg-surface);
+  border: 1px solid var(--lg-border);
+  border-radius: 4px;
+  padding: 26px;
+}
+.landing-scope .lg-card .lg-k {
+  font-family: var(--font-plex-mono), monospace;
+  font-size: 0.72rem;
+  color: var(--lg-amber);
+  margin-bottom: 12px;
+  display: block;
+}
+.landing-scope .lg-card h3 {
+  font-family: var(--font-plex-sans), sans-serif;
+  text-transform: none;
+  font-size: 1.08rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  margin-bottom: 8px;
+}
+.landing-scope .lg-card p {
+  color: var(--lg-muted);
+  font-size: 0.94rem;
+  margin: 0;
+}
+
+/* ---- how it works: pipeline ---- */
+.landing-scope .lg-pipeline {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  position: relative;
+}
+.landing-scope .lg-pipe-step {
+  padding: 0 22px;
+  position: relative;
+}
+.landing-scope .lg-pipe-num {
+  font-family: var(--font-plex-mono), monospace;
+  font-size: 0.78rem;
+  color: var(--lg-cyan);
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--lg-border);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  margin-bottom: 18px;
+  background: var(--lg-surface);
+}
+.landing-scope .lg-pipe-step h3 {
+  font-family: var(--font-plex-sans), sans-serif;
+  text-transform: none;
+  font-weight: 600;
+  font-size: 1.1rem;
+  letter-spacing: 0;
+  margin-bottom: 10px;
+}
+.landing-scope .lg-pipe-step p {
+  color: var(--lg-muted);
+  font-size: 0.94rem;
+}
+
+/* ---- result: spec sheet ---- */
+.landing-scope .lg-result-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  align-items: start;
+}
+.landing-scope .lg-spec-row {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 14px;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--lg-border);
+  font-size: 0.92rem;
+}
+.landing-scope .lg-spec-row:last-child {
+  border-bottom: none;
+}
+.landing-scope .lg-spec-row .lg-field {
+  font-family: var(--font-plex-mono), monospace;
+  font-size: 0.72rem;
+  color: var(--lg-muted);
+  padding-top: 2px;
+}
+.landing-scope .lg-spec-row .lg-value b {
+  color: var(--lg-amber);
+  font-weight: 600;
+}
+.landing-scope .lg-spec-row.lg-source .lg-value {
+  color: var(--lg-muted);
+  font-size: 0.88rem;
+  font-style: italic;
+}
+.landing-scope .lg-spec-sheet-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 22px;
+  border-bottom: 1px dashed var(--lg-border);
+  font-family: var(--font-plex-mono), monospace;
+  font-size: 0.72rem;
+  color: var(--lg-cyan);
+}
+.landing-scope .lg-result-copy h2 {
+  font-size: clamp(1.7rem, 3vw, 2.3rem);
+  margin-bottom: 18px;
+}
+.landing-scope .lg-result-copy p {
+  color: var(--lg-muted);
+  margin-bottom: 16px;
+}
+.landing-scope .lg-result-copy .lg-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-plex-mono), monospace;
+  font-size: 0.76rem;
+  color: var(--lg-cyan);
+  background: var(--lg-cyan-soft);
+  padding: 6px 12px;
+  border-radius: 999px;
+  margin-bottom: 20px;
+}
+
+/* ---- tech stack ---- */
+.landing-scope .lg-stack-band {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.landing-scope .lg-chip {
+  font-family: var(--font-plex-mono), monospace;
+  font-size: 0.82rem;
+  border: 1px solid var(--lg-border);
+  background: var(--lg-surface);
+  padding: 10px 16px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.landing-scope .lg-chip .lg-sw {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--lg-amber);
+}
+
+/* ---- final cta ---- */
+.landing-scope .lg-final-cta {
+  padding: 72px 0;
+}
+.landing-scope .lg-final-cta .lg-panel {
+  padding: 56px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 30px;
+  flex-wrap: wrap;
+}
+.landing-scope .lg-final-cta .lg-prompt {
+  font-family: var(--font-plex-mono), monospace;
+  color: var(--lg-cyan);
+  font-size: 0.86rem;
+  margin-bottom: 12px;
+}
+.landing-scope .lg-final-cta .lg-prompt::before {
+  content: '❯ ';
+  color: var(--lg-amber);
+}
+.landing-scope .lg-final-cta h2 {
+  font-size: clamp(1.7rem, 3.4vw, 2.4rem);
+  max-width: 18ch;
+}
+
+/* ---- footer ---- */
+.landing-scope footer {
+  padding: 40px 0 56px;
+}
+.landing-scope .lg-footer-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  color: var(--lg-muted);
+  font-family: var(--font-plex-mono), monospace;
+  font-size: 0.78rem;
+}
+
+@media (max-width: 860px) {
+  .landing-scope .lg-hero {
+    grid-template-columns: 1fr;
+  }
+  .landing-scope .lg-grid-3,
+  .landing-scope .lg-pipeline {
+    grid-template-columns: 1fr;
+  }
+  .landing-scope .lg-result-grid {
+    grid-template-columns: 1fr;
+  }
+  .landing-scope nav.lg-primary-nav {
+    display: none;
+  }
+  .landing-scope .lg-final-cta .lg-panel {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* ---- onboarding wizard ---- */
+.landing-scope .lg-wizard-shell {
+  max-width: 1040px;
+  margin: 40px auto 60px;
+  padding: 34px 40px 40px;
+}
+.landing-scope .lg-step-head {
+  margin-bottom: 24px;
+}
+.landing-scope .lg-step-head h2 {
+  font-size: 1.7rem;
+}
+.landing-scope .lg-step-head p {
+  color: var(--lg-muted);
+  margin-top: 8px;
+  font-size: 0.98rem;
+  max-width: 60ch;
+}
+
+.landing-scope .lg-step-progress {
+  max-width: 1040px;
+  margin: 32px auto 0;
+  padding: 0 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.landing-scope .lg-step-progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.76rem;
+  color: var(--lg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.landing-scope .lg-step-progress-label b {
+  color: var(--lg-amber);
+  font-weight: 600;
+}
+.landing-scope .lg-step-progress-bar {
+  display: flex;
+  gap: 5px;
+}
+.landing-scope .lg-step-seg {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--lg-border);
+}
+.landing-scope .lg-step-seg-done {
+  background: var(--lg-amber);
+}
+
+.landing-scope .lg-camera-guide-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.landing-scope .lg-camera-panel,
+.landing-scope .lg-pose-panel {
+  padding: 16px;
+}
+.landing-scope .lg-camera-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: var(--lg-muted);
+  padding: 0 2px 12px;
+}
+.landing-scope .lg-camera-rec {
+  color: var(--lg-cyan);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.landing-scope .lg-camera-rec::before {
+  content: '●';
+  animation: lg-pulse 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-scope .lg-camera-rec::before {
+    animation: none;
+  }
+}
+.landing-scope .lg-camera-stage {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #0d0f14;
+}
+.landing-scope .lg-camera-video,
+.landing-scope .lg-camera-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.landing-scope .lg-camera-foot {
+  padding-top: 12px;
+  font-size: 0.72rem;
+  color: var(--lg-muted);
+}
+.landing-scope .lg-camera-foot b {
+  color: var(--lg-amber);
+  font-weight: 600;
+}
+
+.landing-scope .lg-guide-stage {
+  aspect-ratio: 4 / 3;
+  display: grid;
+  place-items: center;
+}
+.landing-scope .lg-pose-label {
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--lg-muted);
+  padding-top: 8px;
+  border-top: 1px dashed var(--lg-border);
+  margin-top: 4px;
+}
+.landing-scope .lg-pose-label b {
+  color: var(--lg-amber);
+}
+
+.landing-scope .lg-wizard-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 30px;
+}
+
+@media (max-width: 760px) {
+  .landing-scope .lg-camera-guide-row {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 640px) {
+  .landing-scope .lg-wizard-shell {
+    padding: 26px 20px 30px;
+  }
+  .landing-scope .lg-step-progress {
+    padding: 0 20px;
+  }
+}

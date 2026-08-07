@@ -116,6 +116,12 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    /* Reserve the scrollbar's width permanently, so locking body scroll
+       (e.g. shadcn/Radix Dialog while a modal is open) doesn't make the
+       scrollbar disappear and shove the whole page sideways. */
+    scrollbar-gutter: stable;
+  }
   body {
     @apply bg-background text-foreground;
   }
