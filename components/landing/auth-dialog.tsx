@@ -69,7 +69,7 @@ export function AuthDialog({
 
     const onSuccess = () => {
       handleOpenChange(false)
-      router.push('/dashboard')
+      // router.push('/dashboard')
       router.refresh()
     }
     const onError = (ctx: { error: { message: string } }) => {

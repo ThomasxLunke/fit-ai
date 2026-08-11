@@ -2,7 +2,7 @@ export type CtaLink = { label: string; href: string }
 export type LandingCta = { primary: CtaLink; secondary: CtaLink | null }
 
 export function resolveLandingCta(
-  user: { onboarded: boolean } | null
+  user: { onboarded: boolean } | null,
 ): LandingCta {
   if (!user)
     return {
@@ -12,7 +12,7 @@ export function resolveLandingCta(
 
   if (!user.onboarded)
     return {
-      primary: { label: "Continuer l'onboarding", href: '/onboarding' },
+      primary: { label: "Continuer vers l'onboarding", href: '/onboarding' },
       secondary: null,
     }
 

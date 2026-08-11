@@ -17,6 +17,7 @@ import { average, getAverageDistance, getDistance } from '@/lib/utils'
 import { StepProgress } from '@/components/onboarding/step-progress'
 import { CameraPanel } from '@/components/onboarding/camera-panel'
 import { PoseGuide, type PoseHighlight } from '@/components/onboarding/pose-guide'
+import { DevFillMeasurementButton } from '@/components/onboarding/dev-fill-measurement-button'
 
 const formSchema = z.object({
   sessionPerWeek: z.number().min(1).max(7),
@@ -356,13 +357,50 @@ export default function OnboardingForm() {
         ? measurementLeg.length
         : measurementTorso.length
 
+  // Dev-only — see components/onboarding/dev-fill-measurement-button.tsx.
+  // Values approximate what detect() actually produces: a true ratio for
+  // the arm (~0.9-1.0), raw pixel distances for legs/torso (their
+  // magnitude depends on camera resolution/distance, not a 0-2 ratio).
+  const fillFakeMeasurement = () => {
+    const fakeSamples = (base: number, spread: number) =>
+      Array.from({ length: 100 }, () => base + (Math.random() - 0.5) * spread)
+
+    if (currentStep === 4) setMeasurementArm(fakeSamples(0.95, 0.1))
+    if (currentStep === 5) setMeasurementLeg(fakeSamples(300, 20))
+    if (currentStep === 6) setMeasurementTorso(fakeSamples(150, 15))
+  }
+
+  const isNextDisabled =
+    currentStep === steps.length - 1 ||
+    (currentStep === 1 && form.watch('dayAvailable').length === 0) ||
+    (currentStep === 2 && !form.watch('objective')) ||
+    (currentStep === 3 && !form.watch('programPreferences')) ||
+    (currentStep === 4 && measurementArm.length < 100) ||
+    (currentStep === 5 && measurementLeg.length < 100) ||
+    (currentStep === 6 && measurementTorso.length < 100)
+
+  // Steps 0-6 have no <button type="submit"> in the DOM (it only renders on
+  // step 7), but a form with a single text input still submits implicitly on
+  // Enter per the HTML spec — which was skipping straight to program
+  // generation with whatever partial values happened to be in the form.
+  // Redirect Enter to "advance a step" everywhere except the last one.
+  const handleFormKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+    if (e.key !== 'Enter' || currentStep === 7) return
+    e.preventDefault()
+    if (!isNextDisabled) setCurrentStep((step) => step + 1)
+  }
+
   return (
     <div className="lg-wrap">
       <StepProgress current={currentStep} total={steps.length} />
 
       <div className="lg-panel lg-wizard-shell">
         <span className="lg-br" />
-        <form className="flex flex-col gap-8" onSubmit={handleSubmit}>
+        <form
+          className="flex flex-col gap-8"
+          onSubmit={handleSubmit}
+          onKeyDown={handleFormKeyDown}
+        >
           <div className="flex flex-col gap-8">
             {currentStep === 0 && (
               <div className="flex flex-col gap-4">
@@ -513,6 +551,8 @@ export default function OnboardingForm() {
                   votre navigateur, seuls les ratios calculés (des nombres)
                   sont conservés.
                 </div>
+
+                <DevFillMeasurementButton onFill={fillFakeMeasurement} />
               </div>
             )}
             {currentStep === 7 && (
@@ -547,16 +587,7 @@ export default function OnboardingForm() {
                 Précédent
               </Button>
               <Button
-                disabled={
-                  currentStep === steps.length - 1 ||
-                  (currentStep === 1 &&
-                    form.watch('dayAvailable').length === 0) ||
-                  (currentStep === 2 && !form.watch('objective')) ||
-                  (currentStep === 3 && !form.watch('programPreferences')) ||
-                  (currentStep === 4 && measurementArm.length < 100) ||
-                  (currentStep === 5 && measurementLeg.length < 100) ||
-                  (currentStep === 6 && measurementTorso.length < 100)
-                }
+                disabled={isNextDisabled}
                 type="button"
                 onClick={() => setCurrentStep(currentStep + 1)}
               >

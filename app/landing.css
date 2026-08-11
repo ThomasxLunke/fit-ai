@@ -199,7 +199,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 0;
+  /* Same shared-element trap as .lg-hero: this and .lg-wrap land on the
+     same div, so `padding` (the shorthand) would wipe .lg-wrap's
+     horizontal padding — vertical-only properties here instead. */
+  padding-top: 18px;
+  padding-bottom: 18px;
 }
 .landing-scope .lg-logo {
   display: flex;
@@ -238,6 +242,99 @@
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+/* Mobile menu trigger — hidden by default, swaps with the desktop actions
+   at the same 860px breakpoint the primary nav already collapses at.
+   Compound selector (.lg-icon-btn.lg-menu-trigger), not just .lg-menu-trigger
+   alone: this button also carries .lg-icon-btn, whose own `display: grid`
+   rule appears later in this file — equal specificity would let it win the
+   cascade and keep the trigger visible even outside the media query. */
+.landing-scope .lg-icon-btn.lg-menu-trigger {
+  display: none;
+}
+@media (max-width: 860px) {
+  .landing-scope .lg-header-actions-desktop {
+    display: none;
+  }
+  .landing-scope .lg-icon-btn.lg-menu-trigger {
+    display: grid;
+  }
+}
+
+/* The mobile nav sheet is portalled out to <body> (same as the auth
+   dialog), so it re-declares `.landing-scope` on itself to pick up the
+   tokens/fonts, and needs the same pointer-events reset (`.landing-scope`
+   sets `pointer-events: none` — see the block near the top of this file). */
+.landing-scope[data-slot='sheet-content'] {
+  pointer-events: auto;
+}
+/* Compound selector (no space): .landing-scope and .lg-mobile-sheet land on
+   the SAME element (SheetContent), same trap as the dialog-content rule
+   above. A descendant selector here (`.landing-scope .lg-mobile-sheet`)
+   never matches at all — silently dropping this whole rule, which is why
+   padding/background/gap weren't applying. showCloseButton={false} on the
+   <SheetContent> usage now replaces the old CSS-hide-the-default-close
+   attempt, which had the identical bug. */
+.landing-scope.lg-mobile-sheet {
+  background: var(--lg-bg);
+  border-color: var(--lg-border);
+  gap: 0;
+  /* SheetContent ships with zero padding by default (only its Header/
+     Footer sub-components do) — everything here is laid out directly, so
+     the panel itself needs real padding or content sits flush on the
+     edges. */
+  padding: 22px 22px 28px;
+}
+
+.landing-scope .lg-mobile-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 18px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--lg-border);
+}
+.landing-scope .lg-mobile-sheet-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.landing-scope .lg-mobile-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 18px;
+  margin-bottom: auto;
+  border-bottom: 1px solid var(--lg-border);
+}
+.landing-scope .lg-mobile-nav a {
+  padding: 13px 10px;
+  font-size: 0.98rem;
+  font-weight: 500;
+  text-decoration: none;
+  color: var(--lg-text);
+  border-radius: 8px;
+}
+.landing-scope .lg-mobile-nav a:hover {
+  background: var(--lg-amber-soft);
+  color: var(--lg-amber);
+}
+
+.landing-scope .lg-mobile-sheet-auth {
+  padding-top: 22px;
+}
+.landing-scope .lg-mobile-sheet-auth .lg-eyebrow {
+  margin-bottom: 12px;
+}
+.landing-scope .lg-mobile-sheet-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.landing-scope .lg-mobile-sheet-actions .lg-btn {
+  justify-content: center;
 }
 
 /* Both share --lg-control-height so the icon toggle is never a different
@@ -336,7 +433,12 @@
 
 /* ---- hero ---- */
 .landing-scope .lg-hero {
-  padding: 84px 0 96px;
+  /* padding-top/bottom only (not the `padding` shorthand): .lg-hero and
+     .lg-wrap share this same element, and a shorthand here would reset
+     .lg-wrap's horizontal padding to 0 since both rules have equal
+     specificity and this one comes later in the file. */
+  padding-top: 84px;
+  padding-bottom: 96px;
   display: grid;
   grid-template-columns: 1.05fr 0.95fr;
   gap: 56px;
@@ -936,7 +1038,9 @@
 
 /* ---- program generation loader ---- */
 .landing-scope .lg-generation {
-  padding: 60px 0;
+  /* Same shared-element trap as .lg-hero/.lg-header-inner. */
+  padding-top: 60px;
+  padding-bottom: 60px;
   display: flex;
   flex-direction: column;
   gap: 20px;
