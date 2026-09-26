@@ -3,76 +3,15 @@
 import { OnBoardingSchema } from '@/components/onboarding-form'
 import { PromptTemplate } from '@langchain/core/prompts'
 import { ChatOpenAI } from '@langchain/openai'
-import fetch from 'node-fetch'
 import { schemaProgram } from './schema'
+import {
+  buildTopicQueries,
+  retrieveBookChunks,
+  mergeChunksWithinBudget,
+  formatContextForPrompt,
+} from './retrieval'
 
-interface VectorStoreFileEntry {
-  id: string
-  status: string
-}
-
-// The actual shape returned by OpenAI's "retrieve vector store file content"
-// endpoint: `data` is an array of content parts, not a single {id, content}
-// file — queryVectorStore pushes one such array per file, which is exactly
-// why generateProgram calls `.flat()` on the result afterwards.
-interface VectorStoreFileContentPart {
-  type: string
-  text: string
-}
-
-export const queryVectorStore = async () => {
-  const files: VectorStoreFileContentPart[][] = []
-
-  const res = await fetch(
-    `https://api.openai.com/v1/vector_stores/${process.env.VECTOR_STORE_ID}/files`,
-    {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-    },
-  )
-
-  const resJson = await res.json()
-
-  if (resJson.data) {
-    await Promise.all(
-      resJson.data
-        // A vector store can end up with lingering non-"completed" entries
-        // (a failed OCR/parse attempt, or — observed in practice — OpenAI
-        // sometimes not actually dropping a "failed" entry from this list
-        // even after it's been detached) that have no content to fetch.
-        // Skipping them here, rather than trusting every listed file to
-        // have real content, is what keeps a stray one of those from
-        // crashing generateProgram() on `undefined.text` downstream.
-        .filter((file: VectorStoreFileEntry) => file.status === 'completed')
-        .map(async (file: VectorStoreFileEntry) => {
-          const res = await fetch(
-            `https://api.openai.com/v1/vector_stores/${process.env.VECTOR_STORE_ID}/files/${file.id}/content`,
-            {
-              method: 'GET',
-              headers: {
-                Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-                'Content-Type': 'application/json',
-              },
-            },
-          )
-          const json = await res.json()
-          if (Array.isArray(json.data)) files.push(json.data)
-        }),
-    )
-  }
-  return files
-}
-
-// Cleaning the OCR'd book excerpts (stripping figure legends, OCR garbage,
-// watermarks) used to happen here, on every single generateProgram call —
-// i.e. once per user, redundantly, on the exact same book text every time.
-// That pass now runs once, offline, against the vector store itself (see
-// scripts/export-vector-store-content.ts and lib/context-cleanup.ts) — the
-// store is expected to already contain clean text, so this just uses it
-// as-is.
+const CONTEXT_TOKEN_BUDGET = 6000
 
 // onBoarding.arm = (bras/avant-bras) mesuré en step 4 de l'onboarding
 // (firstDistance épaule-coude / secondDistance coude-poignet — voir
@@ -99,11 +38,18 @@ const interpretTorsoLegRatio = (ratio: number) => {
 }
 
 export const generateProgram = async (onBoarding: OnBoardingSchema) => {
-  const context = await queryVectorStore()
-  const flattenedContext = context.flat() // retire le niveau inutile
-  const contextText = flattenedContext.map((file) => file.text).join('\n\n')
-
   const torsoLegRatio = onBoarding.torso / onBoarding.leg
+  const forearmInterpretation = interpretForearmRatio(onBoarding.arm)
+  const torsoLegInterpretation = interpretTorsoLegRatio(torsoLegRatio)
+
+  const topicQueries = buildTopicQueries(
+    onBoarding,
+    forearmInterpretation,
+    torsoLegInterpretation,
+  )
+  const byTag = await retrieveBookChunks(topicQueries)
+  const chunks = mergeChunksWithinBudget(byTag, CONTEXT_TOKEN_BUDGET)
+  const contextText = formatContextForPrompt(chunks)
 
   const promptTemplate = PromptTemplate.fromTemplate(`
 Tu es un coach expert en biomécanique, morphoanatomie et optimisation des leviers articulaires.
@@ -127,6 +73,7 @@ Consignes impératives :
 2. Pour chaque exercice, "justification.reason" doit expliquer concrètement en quoi ce mouvement convient à CETTE morphologie précise (avant-bras/bras, buste/jambes) — pas une justification générique interchangeable d'un utilisateur à l'autre. N'utilise aucun exercice qui ne conviendrait pas à la morphologie indiquée.
 3. La répartition des séances et le choix des exercices par séance doivent respecter les préférences de programmation, le nombre de séances et les jours disponibles, tout en restant cohérents avec la morphologie.
 4. Si le contexte fourni contient des exemples de séances ou de semaines-type, appuie-toi sur leur format (nombre d'exercices par séance, fréquence hebdomadaire d'un même groupe musculaire) comme référence de structure — sans copier des exercices inadaptés à la morphologie de l'utilisateur.
+5. Pour "justification.source.book", indique exactement l'un des noms de livre apparaissant dans un en-tête "[Source : ...]" du contexte ci-dessus. Pour "source.page", donne une estimation plausible (l'information exacte n'est pas disponible). Pour "source.excerpt", cite un court passage du chunk correspondant.
 
 Respecte strictement le schéma suivant :
 → programme {{ name, description, trainingSessions: [ {{ name, description, day, exercises: [ {{ name, description, sets, reps, weight, justification: {{ reason, source: {{ book, page, excerpt }} }} }} ] }} ] }}
@@ -141,8 +88,8 @@ Sois concis mais exhaustif dans les descriptions des mouvements.
     programPreferences: onBoarding.programPreferences,
     shoulderElbowToElbowWristRatio: onBoarding.arm,
     torsoLegRatio,
-    forearmInterpretation: interpretForearmRatio(onBoarding.arm),
-    torsoLegInterpretation: interpretTorsoLegRatio(torsoLegRatio),
+    forearmInterpretation,
+    torsoLegInterpretation,
     context: contextText,
   })
 

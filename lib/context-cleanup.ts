@@ -15,9 +15,10 @@ import { ChatOpenAI } from '@langchain/openai'
 // that carry no signal, so this strips it — reorganizing/removing only,
 // never rewriting the paragraphs it keeps.
 const contextCleanupPromptTemplate = PromptTemplate.fromTemplate(`
-Voici un texte brut extrait par OCR d'ouvrages de musculation et de biomécanique. Il mélange de vrais paragraphes explicatifs avec du bruit à éliminer. Deux catégories de paragraphes explicatifs sont à conserver mot pour mot :
+Voici un texte brut extrait par OCR d'ouvrages de musculation et de biomécanique. Il mélange de vrais paragraphes explicatifs avec du bruit à éliminer. Trois catégories de contenu sont à conserver mot pour mot :
 1. les descriptions d'exercices, instructions d'exécution, explications physiologiques ;
-2. les paragraphes sur l'influence de la morphologie individuelle sur un exercice (longueur des membres, largeur des épaules, proportions osseuses, souplesse, etc.) — ce sont des paragraphes essentiels qui expliquent pourquoi un exercice doit être adapté selon les mensurations d'une personne, ils doivent être conservés aussi systématiquement que les descriptions d'exercice, même sous un titre du type "INFLUENCE DE LA MORPHOLOGIE OSSEUSE SUR L'ENTRAÎNEMENT".
+2. les paragraphes sur l'influence de la morphologie individuelle sur un exercice (longueur des membres, largeur des épaules, proportions osseuses, souplesse, etc.) — ce sont des paragraphes essentiels qui expliquent pourquoi un exercice doit être adapté selon les mensurations d'une personne, ils doivent être conservés aussi systématiquement que les descriptions d'exercice, même sous un titre du type "INFLUENCE DE LA MORPHOLOGIE OSSEUSE SUR L'ENTRAÎNEMENT" ;
+3. les exemples de séances ou de programmes d'entraînement complets (répartition par jour, liste d'exercices avec séries/répétitions, semaines-type) — même quand leur forme est une liste ou un tableau plutôt qu'un paragraphe de prose, ils sont à conserver aussi systématiquement que les deux catégories précédentes, jamais à traiter comme du bruit à cause de leur mise en forme.
 
 Le bruit à éliminer :
 - des légendes de schémas anatomiques : noms de muscles, os ou repères isolés sur leur propre ligne, qui ne forment pas de phrase (ex: "Petit psoas", "Grand trochanter", "Tête du fémur") ;
@@ -60,7 +61,7 @@ INFLUENCE DE LA MORPHOLOGIE OSSEUSE DU COUDE SUR L'ENTRAÎNEMENT
 Lors de l'entraînement des biceps à la barre, il est important de prendre en compte les différences individuelles de morphologie. En effet, l'angle d'ouverture du coude, qui correspond à l'angle entre le bras et l'avant-bras, peut varier d'un individu à l'autre. Certaines personnes en position anatomique (c'est-à-dire les bras le long du corps, vers l'intérieur, rendant l'entraînement douloureux.
 """
 
-Ne garde que les paragraphes réellement informatifs (des deux catégories ci-dessus), en conservant leur contenu mot pour mot — ne reformule et ne résume jamais un paragraphe conservé, y compris quand tu dois le recoller. Conserve un titre d'exercice ou de section uniquement s'il précède directement un paragraphe explicatif, pour ne pas perdre ce contexte. Compacte chaque paragraphe conservé en un seul bloc continu (sans retour à la ligne interne), sépare les paragraphes conservés les uns des autres par une seule ligne vide, et ne renvoie rien d'autre que ce texte nettoyé — aucun commentaire, aucune introduction.
+Ne garde que le contenu réellement informatif (des trois catégories ci-dessus), en conservant son contenu mot pour mot — ne reformule et ne résume jamais un paragraphe conservé, y compris quand tu dois le recoller. Conserve un titre d'exercice ou de section uniquement s'il précède directement un paragraphe explicatif, pour ne pas perdre ce contexte. Pour un paragraphe de prose (catégories 1 et 2), compacte-le en un seul bloc continu (sans retour à la ligne interne). Pour un exemple de séance/programme (catégorie 3), garde au contraire sa structure ligne par ligne (un exercice ou une ligne de tableau par ligne) — ne le compacte pas en un seul bloc, ça le rendrait illisible. Sépare chaque élément conservé (paragraphe ou exemple de séance) des suivants par une seule ligne vide, et ne renvoie rien d'autre que ce texte nettoyé — aucun commentaire, aucune introduction.
 
 Texte à nettoyer :
 {context}
@@ -76,9 +77,11 @@ export const cleanBookText = async (rawText: string): Promise<string> => {
     context: rawText,
   })
 
+  // gpt-6-sol rejects a custom temperature (reasoning-tier models only
+  // accept the default) — omit it rather than pass 0 like the rest of this
+  // codebase does for other models.
   const model = new ChatOpenAI({
-    model: 'gpt-4o-mini',
-    temperature: 0,
+    model: 'gpt-6-sol',
   })
 
   const result = await model.invoke([{ role: 'user', content: prompt }])

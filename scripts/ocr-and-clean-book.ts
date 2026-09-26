@@ -5,12 +5,15 @@
 // "could not be parsed because it is empty" — there is no shortcut: this
 // rasterizes every page locally with Poppler (pdftoppm), OCRs each page
 // image with Tesseract (French), stitches the pages back into one raw text
-// file, cleans it with the same pass as the rest of the pipeline
-// (lib/context-cleanup.ts, chunked — a 300+ page OCR dump is too large for
-// one gpt-4o-mini call), and writes both versions to scripts/output/ — then
-// appends a manifest.json entry with `fileId` left blank: this never
-// touches the vector store itself, so there's nothing to detach yet. Run
-// attach-new-books.ts afterwards to actually attach the cleaned text.
+// file, runs the deterministic pre-clean (lib/rule-based-cleanup.ts), then
+// cleans what's left with the LLM pass (lib/context-cleanup.ts) in a single
+// call — gpt-6-sol's 1.05M-token input / 128k-token output window comfortably
+// fits even our biggest book, so unlike the old gpt-4o-mini version this
+// doesn't need to chunk the book across several isolated calls. Writes both
+// raw and cleaned versions to scripts/output/ — then appends a manifest.json
+// entry with `fileId` left blank: this never touches the vector store
+// itself, so there's nothing to detach yet. Run attach-new-books.ts
+// afterwards to actually attach the cleaned text.
 //
 // Needs Poppler + Tesseract installed locally (done via winget for this
 // project) and a French language pack in scripts/tessdata/fra.traineddata
@@ -33,6 +36,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { loadEnv } from './load-env'
 import { cleanBookText } from '../lib/context-cleanup'
+import { ruleBasedClean } from '../lib/rule-based-cleanup'
 
 const execFileAsync = promisify(execFile)
 
@@ -68,7 +72,12 @@ const TESSERACT = findBinary(
 )
 
 const TESSDATA_DIR = resolve(process.cwd(), 'scripts/tessdata')
-const MAX_CLEAN_CHUNK_CHARS = 90000 // headroom under gpt-4o-mini's context per call
+
+// Safety margin well under gpt-6-sol's 1.05M-token input limit (~4 chars/
+// token for French text) — a clear error here beats a cryptic API failure
+// if a future book turns out to be far bigger than anything seen so far
+// (our biggest today, Blessures, is ~640k raw chars / 184k tokens).
+const MAX_CLEAN_INPUT_CHARS = 3_500_000
 
 const safeName = (name: string) => name.replace(/[^a-z0-9._-]/gi, '_')
 
@@ -135,50 +144,17 @@ async function ocrPdf(pdfPath: string): Promise<string> {
   }
 }
 
-// Splits on blank lines (paragraph boundaries) so a chunk cut never lands
-// mid-paragraph, which would otherwise give cleanBookText() a truncated
-// sentence at a chunk edge and risk it being misread as noise and dropped.
-function chunkText(text: string, maxChars: number): string[] {
-  const paragraphs = text.split(/\n\n+/)
-  const chunks: string[] = []
-  let current = ''
-
-  for (const paragraph of paragraphs) {
-    if (current && current.length + paragraph.length + 2 > maxChars) {
-      chunks.push(current)
-      current = ''
-    }
-    current += (current ? '\n\n' : '') + paragraph
-  }
-  if (current) chunks.push(current)
-  return chunks
-}
-
-// cleanBookText()'s prompt shows a `"""`-wrapped worked example — cleaning
-// per-chunk (instead of the whole book in one call) makes the model treat
-// each chunk like that example and echo the wrapper on some of them (as
-// ``` too, not just """, and not necessarily only at the very start/end of
-// a chunk — sometimes around a sub-section in the middle). Strip any line
-// that's just a wrapper marker rather than touch the shared prompt, since
-// whole-book calls don't exhibit this.
+// cleanBookText()'s prompt shows a `"""`-wrapped worked example — a model
+// can echo that wrapper (as ``` too, not just """) around its answer.
+// Never observed on a whole-book single call, only when the same prompt
+// was run per-chunk against a smaller model, but cheap enough to keep as a
+// no-op safety net either way.
 const stripFenceLines = (text: string) =>
   text
     .split('\n')
     .filter((line) => !/^\s*(```|""")\s*$/.test(line))
     .join('\n')
     .trim()
-
-async function cleanLongText(rawText: string): Promise<string> {
-  const chunks = chunkText(rawText, MAX_CLEAN_CHUNK_CHARS)
-  console.log(`  Cleaning ${chunks.length} chunk(s)…`)
-  const cleaned: string[] = []
-  for (let i = 0; i < chunks.length; i++) {
-    process.stdout.write(`\r  Cleaning: ${i + 1}/${chunks.length}`)
-    cleaned.push(stripFenceLines(await cleanBookText(chunks[i])))
-  }
-  console.log('')
-  return cleaned.filter(Boolean).join('\n\n')
-}
 
 async function processOne(pdfPath: string, manifest: ManifestEntry[]) {
   const filename = basename(pdfPath)
@@ -187,7 +163,15 @@ async function processOne(pdfPath: string, manifest: ManifestEntry[]) {
   const rawText = await ocrPdf(pdfPath)
   console.log(`  → ${rawText.length} chars extracted`)
 
-  const cleanText = await cleanLongText(rawText)
+  const { text: preCleanedText } = ruleBasedClean(rawText)
+  if (preCleanedText.length > MAX_CLEAN_INPUT_CHARS) {
+    throw new Error(
+      `${filename}: pre-cleaned text is ${preCleanedText.length} chars, over the ${MAX_CLEAN_INPUT_CHARS} safety margin for a single cleaning call — needs chunking again, revisit this script.`,
+    )
+  }
+
+  console.log('  Cleaning (single call)…')
+  const cleanText = stripFenceLines(await cleanBookText(preCleanedText))
 
   const outDir = resolve(process.cwd(), 'scripts/output')
   mkdirSync(resolve(outDir, 'raw'), { recursive: true })
