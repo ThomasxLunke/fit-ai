@@ -43,6 +43,15 @@ next-env.d.ts
 # prisma
 /lib/generated/prisma
 
+# extracted book content (scripts/export-vector-store-content.ts,
+# scripts/ocr-and-clean-book.ts) — not something to commit: raw/ has the
+# source PDFs (copyrighted scans, some over GitHub's 100MB file limit) and
+# their raw OCR dumps, clean/ is regenerable from them (see manifest.json)
+/scripts/output
+
+# Tesseract language models downloaded by scripts/ocr-and-clean-book.ts
+/scripts/tessdata
+
 
 CLAUDE.md
 .claude

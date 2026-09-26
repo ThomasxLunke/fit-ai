@@ -952,6 +952,26 @@
 }
 
 /* ---- dashboard: program view ---- */
+.landing-scope .lg-dev-payload-panel {
+  padding: 20px 24px;
+  margin: 40px 0 0;
+  border-color: var(--lg-cyan);
+}
+.landing-scope .lg-dev-payload-grid {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+}
+.landing-scope .lg-dev-payload-row {
+  display: grid;
+  grid-template-columns: minmax(0, 260px) 1fr;
+  gap: 16px;
+  font-size: 0.82rem;
+}
+.landing-scope .lg-dev-payload-label {
+  color: var(--lg-muted);
+}
+
 .landing-scope .lg-program-head {
   padding: 26px 28px;
   margin: 40px 0 30px;

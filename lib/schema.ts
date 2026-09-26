@@ -16,10 +16,6 @@ export const schemaExercise = z.object({
   }),
 })
 
-// Constrained (not a free-form string) so the dashboard's weekly view can
-// reliably place each session on a real day — this is enforced at the LLM
-// call site via withStructuredOutput's function-calling schema, not just a
-// prompt hint.
 export const dayOfWeek = z.enum([
   'Lundi',
   'Mardi',

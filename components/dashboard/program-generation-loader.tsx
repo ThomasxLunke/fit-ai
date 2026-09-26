@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation'
 import { getUserBySessionAuth } from '@/app/actions'
 import { generateProgram } from '@/lib/ai'
 import { createProgramOnBoarding, updateUser } from '@/lib/api'
-import type { OnBoardingSchema } from '@/components/onboarding-form'
-
-const STORAGE_KEY = 'fitai:onboarding-payload'
+import {
+  getOnboardingPayload,
+  clearOnboardingPayload,
+} from '@/lib/onboarding-storage'
 
 const STATUS_MESSAGES = [
   'Récupération de vos mesures…',
@@ -19,19 +20,15 @@ const STATUS_MESSAGES = [
 ]
 
 const FUN_FACTS = [
-  "Un bras de levier plus court permet souvent de déplacer une charge plus lourde, mais sur une amplitude de mouvement plus réduite.",
+  'Un bras de levier plus court permet souvent de déplacer une charge plus lourde, mais sur une amplitude de mouvement plus réduite.',
   "La longueur relative de votre fémur influence directement l'angle d'inclinaison du buste optimal en squat.",
   'Deux personnes de même taille peuvent avoir des ratios de segments totalement différents — donc des exercices de référence différents.',
   'Le rowing et le tirage horizontal sollicitent davantage le grand dorsal quand le torse est proportionnellement plus long.',
-  "Un avant-bras court par rapport au bras favorise mécaniquement les mouvements de flexion du coude, comme le curl biceps.",
+  'Un avant-bras court par rapport au bras favorise mécaniquement les mouvements de flexion du coude, comme le curl biceps.',
   'La biomécanique explique pourquoi un même exercice peut sembler facile pour une personne et difficile pour une autre, à charge égale.',
   'Squat, développé couché et soulevé de terre restent efficaces sur toutes les morphologies — mais jamais avec la même technique optimale.',
 ]
 
-// Rendered by app/(dashboard)/dashboard/page.tsx when landing on
-// /dashboard?generating=1 (see onboarding-form.tsx's handleSubmit, which
-// redirects here immediately instead of waiting on the wizard's last step).
-// The actual generation payload travels via sessionStorage, not the URL.
 export function ProgramGenerationLoader() {
   const router = useRouter()
   const [statusIndex, setStatusIndex] = useState(0)
@@ -41,8 +38,8 @@ export function ProgramGenerationLoader() {
 
   const runGeneration = async () => {
     setError('')
-    const raw = sessionStorage.getItem(STORAGE_KEY)
-    if (!raw) {
+    const payload = getOnboardingPayload()
+    if (!payload) {
       // Nothing to generate (direct visit, or already consumed) — re-evaluate
       // the page normally instead of showing a loader forever.
       router.replace('/dashboard')
@@ -50,17 +47,23 @@ export function ProgramGenerationLoader() {
     }
 
     try {
-      const payload = JSON.parse(raw) as OnBoardingSchema
       const user = await getUserBySessionAuth()
       const program = await generateProgram(payload)
       await createProgramOnBoarding(user.id, program)
-      await updateUser(user.id, { ...user, onboarded: true })
-      sessionStorage.removeItem(STORAGE_KEY)
+      // Strip the included `program` relation before sending: the PATCH
+      // route forwards this object as-is to prisma.user.update({ data }),
+      // which rejects a raw relation value there (it expects nested-write
+      // syntax like `connect`/`disconnect`, not the plain object `include`
+      // gives us) — only the scalar fields need updating anyway.
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { program: _currentProgram, ...userScalars } = user
+      await updateUser(user.id, { ...userScalars, onboarded: true })
+      clearOnboardingPayload()
       router.replace('/dashboard')
     } catch (err) {
       console.error(err)
       setError(
-        'La génération de votre programme a échoué. Vos mesures sont conservées : vous pouvez réessayer sans repasser devant la caméra.'
+        'La génération de votre programme a échoué. Vos mesures sont conservées : vous pouvez réessayer sans repasser devant la caméra.',
       )
     }
   }

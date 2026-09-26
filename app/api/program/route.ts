@@ -10,6 +10,12 @@ export const POST = async (req: Request) => {
   }: { onBoardingProg: z.infer<typeof schemaProgram>; userId: string } =
     await req.json()
 
+  // Program.userId is unique (one program per user) — deleting any existing
+  // one first (cascades to its trainingSessions/exercises) makes this
+  // endpoint safe to call again for a user who already has a program,
+  // instead of failing on the unique constraint.
+  await prisma.program.deleteMany({ where: { userId } })
+
   const program = await prisma.program.create({
     data: {
       name: onBoardingProg.name,

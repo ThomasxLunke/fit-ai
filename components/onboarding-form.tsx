@@ -18,6 +18,7 @@ import { StepProgress } from '@/components/onboarding/step-progress'
 import { CameraPanel } from '@/components/onboarding/camera-panel'
 import { PoseGuide, type PoseHighlight } from '@/components/onboarding/pose-guide'
 import { DevFillMeasurementButton } from '@/components/onboarding/dev-fill-measurement-button'
+import { setOnboardingPayload } from '@/lib/onboarding-storage'
 
 const formSchema = z.object({
   sessionPerWeek: z.number().min(1).max(7),
@@ -94,7 +95,7 @@ export default function OnboardingForm() {
 
   const detect = async (
     model: bodyPix.BodyPix,
-    pushMeasurement: (val: number) => void
+    pushMeasurement: (val: number) => void,
   ) => {
     if (
       typeof webcamRef.current !== 'undefined' &&
@@ -134,11 +135,11 @@ export default function OnboardingForm() {
           if (
             currentStep === 4 &&
             ['leftShoulder', 'leftElbow', 'leftWrist'].every((v) =>
-              parts.includes(v)
+              parts.includes(v),
             )
           ) {
             const leftShoulder = keypoints.find(
-              (k) => k.part === 'leftShoulder'
+              (k) => k.part === 'leftShoulder',
             )
             const leftElbow = keypoints.find((k) => k.part === 'leftElbow')
             const leftWrist = keypoints.find((k) => k.part === 'leftWrist')
@@ -151,13 +152,13 @@ export default function OnboardingForm() {
                 leftShoulder!.position.x,
                 leftShoulder!.position.y,
                 leftElbow!.position.x,
-                leftElbow!.position.y
+                leftElbow!.position.y,
               )
               const secondDistance = getDistance(
                 leftWrist!.position.x,
                 leftWrist!.position.y,
                 leftElbow!.position.x,
-                leftElbow!.position.y
+                leftElbow!.position.y,
               )
               const ratio = firstDistance / secondDistance
               pushMeasurement(ratio)
@@ -204,15 +205,15 @@ export default function OnboardingForm() {
           if (
             currentStep === 6 &&
             ['leftShoulder', 'leftHip', 'rightShoulder', 'rightHip'].every(
-              (v) => parts.includes(v)
+              (v) => parts.includes(v),
             )
           ) {
             const leftShoulder = keypoints.find(
-              (k) => k.part === 'leftShoulder'
+              (k) => k.part === 'leftShoulder',
             )
             const leftHip = keypoints.find((k) => k.part === 'leftHip')
             const rightShoulder = keypoints.find(
-              (k) => k.part === 'rightShoulder'
+              (k) => k.part === 'rightShoulder',
             )
             const rightHip = keypoints.find((k) => k.part === 'rightHip')
 
@@ -224,11 +225,11 @@ export default function OnboardingForm() {
             ) {
               const leftTorso = getAverageDistance(
                 leftShoulder!.position,
-                leftHip!.position
+                leftHip!.position,
               )
               const rightTorso = getAverageDistance(
                 rightShoulder!.position,
-                rightHip!.position
+                rightHip!.position,
               )
               const ratio = (leftTorso + rightTorso) / 2
               pushMeasurement(ratio)
@@ -303,18 +304,13 @@ export default function OnboardingForm() {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    // The actual generation (generateProgram + persistence) no longer runs
-    // here — it's kicked off by ProgramGenerationLoader once we land on
-    // /dashboard, so "Valider" navigates immediately instead of leaving the
-    // user waiting on this last wizard screen. The payload travels via
-    // sessionStorage since it won't fit cleanly in a URL.
     const payload: OnBoardingSchema = {
       ...form.getValues(),
       arm: average(measurementArm),
       leg: average(measurementLeg),
       torso: average(measurementTorso),
     }
-    sessionStorage.setItem('fitai:onboarding-payload', JSON.stringify(payload))
+    setOnboardingPayload(payload)
     router.push('/dashboard?generating=1')
   }
 
@@ -440,7 +436,7 @@ export default function OnboardingForm() {
                             ? form
                                 .watch('dayAvailable')
                                 .filter((d) => d !== day.value)
-                            : [...form.watch('dayAvailable'), day.value]
+                            : [...form.watch('dayAvailable'), day.value],
                         )
                       }
                     >
@@ -470,7 +466,7 @@ export default function OnboardingForm() {
                       onClick={() =>
                         form.setValue(
                           'objective',
-                          obj.value as 'lose' | 'gain' | 'maintain'
+                          obj.value as 'lose' | 'gain' | 'maintain',
                         )
                       }
                       className="w-full"
@@ -505,7 +501,7 @@ export default function OnboardingForm() {
                             | 'half-body'
                             | 'full-body'
                             | 'split'
-                            | 'none'
+                            | 'none',
                         )
                       }
                       className="w-full"
