@@ -17,7 +17,10 @@ import {
   retrieveBookChunks,
   mergeChunksWithinBudget,
 } from '../lib/retrieval'
-import { interpretForearmRatio, interpretTorsoLegRatio } from '../lib/ai'
+import {
+  interpretForearmRatio,
+  interpretTorsoLegRatio,
+} from '../lib/morphology-interpretation'
 
 const samples: { label: string; payload: OnBoardingSchema }[] = [
   {
