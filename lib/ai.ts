@@ -16,25 +16,31 @@ const CONTEXT_TOKEN_BUDGET = 12000
 // onBoarding.arm = (bras/avant-bras) mesuré en step 4 de l'onboarding
 // (firstDistance épaule-coude / secondDistance coude-poignet — voir
 // onboarding-form.tsx). >1 = bras plus long que l'avant-bras, <1 = l'inverse.
-// La bande neutre (0.9-1.1) et le seuil du ratio buste/jambe (baseline 0.5,
-// tirée de fillFakeMeasurement()'s arm≈0.95/leg≈300/torso≈150 dans
-// onboarding-form.tsx — la seule approximation de mesures réalistes dont on
-// dispose) sont des heuristiques, pas des normes anthropométriques validées :
-// le but est juste de donner au modèle une lecture "long/court/proportionné"
-// cohérente d'un utilisateur à l'autre plutôt que de le laisser interpréter
-// un ratio brut sans repère.
-const interpretForearmRatio = (ratio: number) => {
+// Graduée délibérément plutôt qu'une large bande "proportionné" unique :
+// même un écart de 5-10% change mesurablement le bras de levier dans un
+// mouvement, donc regrouper tout ce qui est proche de 1.0 sous "équilibré"
+// jetterait un vrai signal exploitable — seul un écart réellement
+// négligeable (~3%) est qualifié de "quasiment identique". Les seuils
+// restent des heuristiques, pas des normes anthropométriques validées :
+// le but est une lecture directionnelle cohérente d'un utilisateur à
+// l'autre, pas une prétention à la précision.
+export const interpretForearmRatio = (ratio: number) => {
   if (ratio > 1.1) return 'avant-bras nettement plus court que le bras'
+  if (ratio > 1.03) return 'avant-bras légèrement plus court que le bras'
   if (ratio < 0.9) return 'avant-bras nettement plus long que le bras'
-  return 'bras et avant-bras de longueur proportionnée'
+  if (ratio < 0.97) return 'avant-bras légèrement plus long que le bras'
+  return 'bras et avant-bras de longueur quasiment identique'
 }
 
-const interpretTorsoLegRatio = (ratio: number) => {
-  if (ratio > 0.57)
-    return 'buste proportionnellement long par rapport aux jambes'
+export const interpretTorsoLegRatio = (ratio: number) => {
+  if (ratio > 0.57) return 'buste nettement plus long par rapport aux jambes'
+  if (ratio > 0.515)
+    return 'buste légèrement plus long par rapport aux jambes'
   if (ratio < 0.43)
-    return 'jambes proportionnellement longues par rapport au buste'
-  return 'buste et jambes de longueur proportionnée'
+    return 'jambes nettement plus longues par rapport au buste'
+  if (ratio < 0.485)
+    return 'jambes légèrement plus longues par rapport au buste'
+  return 'buste et jambes de longueur quasiment identique'
 }
 
 export const generateProgram = async (onBoarding: OnBoardingSchema) => {

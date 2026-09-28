@@ -17,20 +17,7 @@ import {
   retrieveBookChunks,
   mergeChunksWithinBudget,
 } from '../lib/retrieval'
-
-const interpretForearmRatio = (ratio: number) => {
-  if (ratio > 1.1) return 'avant-bras nettement plus court que le bras'
-  if (ratio < 0.9) return 'avant-bras nettement plus long que le bras'
-  return 'bras et avant-bras de longueur proportionnée'
-}
-
-const interpretTorsoLegRatio = (ratio: number) => {
-  if (ratio > 0.57)
-    return 'buste proportionnellement long par rapport aux jambes'
-  if (ratio < 0.43)
-    return 'jambes proportionnellement longues par rapport au buste'
-  return 'buste et jambes de longueur proportionnée'
-}
+import { interpretForearmRatio, interpretTorsoLegRatio } from '../lib/ai'
 
 const samples: { label: string; payload: OnBoardingSchema }[] = [
   {

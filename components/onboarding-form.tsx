@@ -16,7 +16,10 @@ import '@mediapipe/selfie_segmentation'
 import { average, getAverageDistance, getDistance } from '@/lib/utils'
 import { StepProgress } from '@/components/onboarding/step-progress'
 import { CameraPanel } from '@/components/onboarding/camera-panel'
-import { PoseGuide, type PoseHighlight } from '@/components/onboarding/pose-guide'
+import {
+  PoseGuide,
+  type PoseHighlight,
+} from '@/components/onboarding/pose-guide'
 import { DevFillMeasurementButton } from '@/components/onboarding/dev-fill-measurement-button'
 import { setOnboardingPayload } from '@/lib/onboarding-storage'
 
@@ -361,9 +364,9 @@ export default function OnboardingForm() {
     const fakeSamples = (base: number, spread: number) =>
       Array.from({ length: 100 }, () => base + (Math.random() - 0.5) * spread)
 
-    if (currentStep === 4) setMeasurementArm(fakeSamples(0.95, 0.1))
+    if (currentStep === 4) setMeasurementArm(fakeSamples(0.95, 0.7))
     if (currentStep === 5) setMeasurementLeg(fakeSamples(300, 20))
-    if (currentStep === 6) setMeasurementTorso(fakeSamples(150, 15))
+    if (currentStep === 6) setMeasurementTorso(fakeSamples(300, 20))
   }
 
   const isNextDisabled =
@@ -543,9 +546,9 @@ export default function OnboardingForm() {
                 <div className="lg-trust-line">
                   <Lock className="h-3.5 w-3.5" />
                   Aucune image ni vidéo n&apos;est enregistrée ou envoyée à un
-                  serveur — le traitement s&apos;exécute entièrement dans
-                  votre navigateur, seuls les ratios calculés (des nombres)
-                  sont conservés.
+                  serveur — le traitement s&apos;exécute entièrement dans votre
+                  navigateur, seuls les ratios calculés (des nombres) sont
+                  conservés.
                 </div>
 
                 <DevFillMeasurementButton onFill={fillFakeMeasurement} />
