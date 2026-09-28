@@ -68,7 +68,6 @@ model Exercise {
   weight Int  
   reason String
   sourceBook String
-  sourcePage Int
   sourceExcerpt String
 
   createdAt DateTime @default(now())

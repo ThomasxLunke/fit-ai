@@ -35,6 +35,8 @@ async function main() {
     console.log(`\n  ${session.day} — ${session.name} (${session.exercises.length} exercices)`)
     for (const ex of session.exercises) {
       console.log(`    - ${ex.name} [${ex.justification.source.book}]`)
+      console.log(`      raison: ${ex.justification.reason}`)
+      console.log(`      extrait: ${ex.justification.source.excerpt}`)
     }
   }
 }

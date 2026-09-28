@@ -10,7 +10,6 @@ export const schemaExercise = z.object({
     reason: z.string(),
     source: z.object({
       book: z.string(),
-      page: z.number(),
       excerpt: z.string(),
     }),
   }),

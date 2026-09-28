@@ -119,7 +119,7 @@ async function main() {
       }
     }
 
-    const merged = mergeChunksWithinBudget(byTag, 6000)
+    const merged = mergeChunksWithinBudget(byTag, 12000)
     const totalTokens = merged.reduce((sum, c) => sum + c.tokens, 0)
     const bookCounts = merged.reduce<Record<string, number>>((acc, c) => {
       acc[c.book] = (acc[c.book] ?? 0) + 1

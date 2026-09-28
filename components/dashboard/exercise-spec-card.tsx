@@ -43,7 +43,7 @@ export function ExerciseSpecCard({
       <div className="lg-spec-row lg-source">
         <span className="lg-field">SOURCE</span>
         <span className="lg-value">
-          {exercise.sourceBook}, p.{exercise.sourcePage} — «{' '}
+          {exercise.sourceBook} — «{' '}
           {exercise.sourceExcerpt} »
         </span>
       </div>

@@ -44,7 +44,6 @@ export const POST = async (req: Request) => {
           weight: exercise.weight,
           reason: exercise.justification.reason,
           sourceBook: exercise.justification.source.book,
-          sourcePage: exercise.justification.source.page,
           sourceExcerpt: exercise.justification.source.excerpt,
           trainingSessionId: createdSession.id,
         })),
