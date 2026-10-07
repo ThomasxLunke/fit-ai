@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Topologie des conteneurs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf9f7;
+    --surface: #ffffff;
+    --ink: #1c1e21;
+    --muted: #6b7280;
+    --line: #dde1e8;
+    --accent: #2563eb;
+    --accent-soft: #e8f0fe;
+    --faint: #f1f2f5;
+    color-scheme: light;
+  }
+  :root:not([data-theme="light"]) {
+    @media (prefers-color-scheme: dark) {
+      --bg: #14161a;
+      --surface: #1c1f26;
+      --ink: #e8eaed;
+      --muted: #9aa3ae;
+      --line: #30343c;
+      --accent: #6ea8fe;
+      --accent-soft: #1e2a44;
+      --faint: #22252c;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161a;
+    --surface: #1c1f26;
+    --ink: #e8eaed;
+    --muted: #9aa3ae;
+    --line: #30343c;
+    --accent: #6ea8fe;
+    --accent-soft: #1e2a44;
+    --faint: #22252c;
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    padding-inline: 20px;
+    padding-block: 32px;
+    line-height: 1.55;
+  }
+  main {
+    max-width: 920px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+  h1 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0 0 4px;
+    text-wrap: balance;
+  }
+  .lede {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin: 0;
+  }
+  code {
+    font-family: "IBM Plex Mono", monospace;
+    background: var(--faint);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+    font-size: 0.9em;
+  }
+  figure {
+    margin: 0;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px 18px 14px;
+    overflow-x: auto;
+  }
+  figure svg {
+    display: block;
+    min-width: 640px;
+  }
+  figcaption {
+    margin-top: 12px;
+    font-size: 0.85rem;
+    color: var(--muted);
+    border-top: 1px solid var(--line);
+    padding-top: 10px;
+  }
+  svg text { font-family: "IBM Plex Mono", monospace; }
+  .box-label { font-size: 12px; fill: var(--ink); font-weight: 500; }
+  .box-sub { font-size: 10px; fill: var(--muted); }
+  .port-accent { font-size: 10px; fill: var(--accent); font-weight: 600; }
+  .port-muted { font-size: 9.5px; fill: var(--muted); }
+  .zone-label { font-size: 11px; fill: var(--muted); font-weight: 600; letter-spacing: 0.02em; }
+  footer {
+    font-size: 0.8rem;
+    color: var(--muted);
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+  }
+</style>
+</head>
+<body>
+<main>
+  <div>
+    <h1>Qui parle à qui, sur quel port</h1>
+    <p class="lede">Notre app et les scripts Python tournent sur l'hôte, hors Docker. Les deux piles (<code>Langfuse</code>, <code>Phoenix</code>) tournent dans des conteneurs séparés. Bleu = chemin qu'on utilise vraiment ; gris = port exposé sur l'hôte mais jamais appelé directement par nous ; les flèches à l'intérieur d'une pile utilisent les ports et noms de service <strong>internes</strong>, invisibles depuis l'extérieur.</p>
+  </div>
+
+  <figure>
+    <svg viewBox="0 0 1000 700" role="img" aria-label="Notre app Next.js et nos scripts Python, hors Docker, envoient des traces et des requêtes API vers langfuse-web (port hôte 3001) et vers Phoenix (port hôte 6006) ; à l'intérieur de la pile Langfuse, langfuse-web communique en interne avec postgres, clickhouse, redis et minio via leurs ports d'origine et noms de service, jamais exposés directement à notre app.">
+      <defs>
+        <marker id="a1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/>
+        </marker>
+        <marker id="a2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="currentColor" opacity="0.55"/>
+        </marker>
+      </defs>
+
+      <!-- Host zone -->
+      <text x="20" y="40" class="zone-label">TA MACHINE — HORS DOCKER</text>
+      <rect x="20" y="120" width="170" height="68" rx="8" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.3"/>
+      <text x="105" y="146" text-anchor="middle" class="box-label">Next.js</text>
+      <text x="105" y="162" text-anchor="middle" class="box-sub">npm run dev</text>
+      <text x="105" y="176" text-anchor="middle" class="box-sub">localhost:3000</text>
+
+      <rect x="20" y="430" width="170" height="68" rx="8" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.3"/>
+      <text x="105" y="456" text-anchor="middle" class="box-label">Scripts Python</text>
+      <text x="105" y="472" text-anchor="middle" class="box-sub">eval/.venv</text>
+      <text x="105" y="486" text-anchor="middle" class="box-sub">(RAGAS)</text>
+
+      <!-- Langfuse boundary -->
+      <rect x="230" y="20" width="580" height="660" rx="12" fill="none" stroke="var(--muted)" stroke-dasharray="6 5" stroke-width="1.3"/>
+      <text x="250" y="45" class="zone-label">DOCKER COMPOSE — STACK LANGFUSE (6 services)</text>
+
+      <!-- web + worker -->
+      <rect x="260" y="70" width="170" height="68" rx="8" fill="var(--surface)" stroke="currentColor" stroke-opacity="0.4"/>
+      <text x="345" y="94" text-anchor="middle" class="box-label">langfuse-web</text>
+      <text x="345" y="110" text-anchor="middle" class="box-sub">UI + API REST</text>
+      <text x="345" y="63" text-anchor="middle" class="port-accent">hôte 3001 → conteneur 3000</text>
+
+      <rect x="460" y="70" width="170" height="68" rx="8" fill="var(--surface)" stroke="currentColor" stroke-opacity="0.4"/>
+      <text x="545" y="94" text-anchor="middle" class="box-label">langfuse-worker</text>
+      <text x="545" y="110" text-anchor="middle" class="box-sub">jobs asynchrones</text>
+      <text x="545" y="63" text-anchor="middle" class="port-muted">hôte 127.0.0.1:3030 (non appelé par nous)</text>
+
+      <!-- stores row -->
+      <rect x="260" y="280" width="115" height="66" rx="8" fill="var(--faint)" stroke="currentColor" stroke-opacity="0.35"/>
+      <text x="317" y="304" text-anchor="middle" class="box-label">postgres</text>
+      <text x="317" y="319" text-anchor="middle" class="box-sub">métadonnées</text>
+      <text x="317" y="362" text-anchor="middle" class="port-muted">hôte 5433→5432</text>
+      <text x="317" y="375" text-anchor="middle" class="port-muted">(non utilisé par nous)</text>
+
+      <rect x="390" y="280" width="115" height="66" rx="8" fill="var(--faint)" stroke="currentColor" stroke-opacity="0.35"/>
+      <text x="447" y="304" text-anchor="middle" class="box-label">clickhouse</text>
+      <text x="447" y="319" text-anchor="middle" class="box-sub">traces/analytics</text>
+      <text x="447" y="362" text-anchor="middle" class="port-muted">hôte 8123/9000</text>
+      <text x="447" y="375" text-anchor="middle" class="port-muted">(non utilisé par nous)</text>
+
+      <rect x="520" y="280" width="115" height="66" rx="8" fill="var(--faint)" stroke="currentColor" stroke-opacity="0.35"/>
+      <text x="577" y="304" text-anchor="middle" class="box-label">redis</text>
+      <text x="577" y="319" text-anchor="middle" class="box-sub">file/cache</text>
+      <text x="577" y="362" text-anchor="middle" class="port-muted">hôte 6380→6379</text>
+      <text x="577" y="375" text-anchor="middle" class="port-muted">(non utilisé par nous)</text>
+
+      <rect x="650" y="280" width="115" height="66" rx="8" fill="var(--faint)" stroke="currentColor" stroke-opacity="0.35"/>
+      <text x="707" y="304" text-anchor="middle" class="box-label">minio</text>
+      <text x="707" y="319" text-anchor="middle" class="box-sub">stockage médias</text>
+      <text x="707" y="362" text-anchor="middle" class="port-muted">hôte 9190/9191</text>
+      <text x="707" y="375" text-anchor="middle" class="port-muted">(non utilisé par nous)</text>
+
+      <!-- internal arrows from web to the 4 stores -->
+      <g stroke="currentColor" opacity="0.55" fill="none">
+        <line x1="320" y1="138" x2="317" y2="276" marker-end="url(#a2)"/>
+        <line x1="345" y1="138" x2="447" y2="276" marker-end="url(#a2)"/>
+        <line x1="400" y1="138" x2="577" y2="276" marker-end="url(#a2)"/>
+        <line x1="420" y1="138" x2="707" y2="276" marker-end="url(#a2)"/>
+      </g>
+      <text x="345" y="235" class="port-muted">réseau interne Docker (noms de service, ports d'origine)</text>
+      <text x="317" y="265" text-anchor="middle" class="port-muted">postgres:5432</text>
+      <text x="447" y="265" text-anchor="middle" class="port-muted">clickhouse:8123</text>
+      <text x="577" y="265" text-anchor="middle" class="port-muted">redis:6379</text>
+      <text x="707" y="265" text-anchor="middle" class="port-muted">minio:9000</text>
+
+      <!-- note about shared internal port number -->
+      <rect x="390" y="400" width="375" height="40" rx="6" fill="none" stroke="currentColor" stroke-opacity="0.25" stroke-dasharray="3 3"/>
+      <text x="577" y="416" text-anchor="middle" class="port-muted">clickhouse ET minio utilisent le port interne 9000</text>
+      <text x="577" y="430" text-anchor="middle" class="port-muted">— deux conteneurs isolés, aucun conflit</text>
+
+      <!-- Phoenix boundary -->
+      <rect x="840" y="110" width="140" height="130" rx="12" fill="none" stroke="var(--muted)" stroke-dasharray="6 5" stroke-width="1.3"/>
+      <text x="855" y="100" class="zone-label" font-size="10">STACK PHOENIX</text>
+      <rect x="858" y="150" width="104" height="66" rx="8" fill="var(--surface)" stroke="currentColor" stroke-opacity="0.4"/>
+      <text x="910" y="172" text-anchor="middle" class="box-label">phoenix</text>
+      <text x="910" y="187" text-anchor="middle" class="box-sub">:6006 UI+HTTP</text>
+      <text x="910" y="200" text-anchor="middle" class="box-sub">:4317 gRPC</text>
+      <text x="910" y="236" text-anchor="middle" class="port-accent">hôte = conteneur</text>
+
+      <!-- external accent arrows from host apps -->
+      <path d="M190,145 L230,105" stroke="var(--accent)" fill="none" marker-end="url(#a1)"/>
+      <text x="195" y="122" class="port-accent">spans OTel → :3001</text>
+
+      <polyline points="190,135 190,15 900,15 900,145" stroke="var(--accent)" fill="none" marker-end="url(#a1)"/>
+      <text x="560" y="10" text-anchor="middle" class="port-accent">spans OTel → :6006/v1/traces</text>
+
+      <path d="M190,460 L260,110" stroke="var(--accent)" fill="none" marker-end="url(#a1)"/>
+      <text x="196" y="330" class="port-accent">API REST → :3001</text>
+      <text x="196" y="344" class="port-muted">(lecture observations, écriture scores)</text>
+
+      <!-- legend -->
+      <g font-size="10">
+        <rect x="20" y="630" width="14" height="10" fill="var(--accent-soft)" stroke="var(--accent)"/>
+        <text x="40" y="639" class="port-muted">chemin externe réellement utilisé par nous</text>
+        <line x1="20" y1="655" x2="34" y2="655" stroke="currentColor" opacity="0.55" marker-end="url(#a2)"/>
+        <text x="40" y="659" class="port-muted">réseau interne Docker (jamais exposé à l'hôte)</text>
+        <rect x="330" y="630" width="14" height="10" fill="var(--faint)" stroke="currentColor" stroke-opacity="0.35"/>
+        <text x="350" y="639" class="port-muted">exposé sur l'hôte, mais pas appelé par notre app</text>
+      </g>
+    </svg>
+    <figcaption>Les ports internes (5432, 6379, 8123, 9000...) n'existent que dans le réseau privé de chaque pile Docker — notre app ne peut pas les joindre directement, même si elle le voulait. Elle ne voit que les ports remappés sur l'hôte (3001, 6006), et ceux-là seulement parce qu'on a explicitement choisi de les exposer.</figcaption>
+  </figure>
+
+  <footer>observability/langfuse/, observability/phoenix/ — fit-ai</footer>
+</main>
+</body>
+</html>

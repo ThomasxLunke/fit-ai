@@ -52,6 +52,12 @@ next-env.d.ts
 # Tesseract language models downloaded by scripts/ocr-and-clean-book.ts
 /scripts/tessdata
 
+# Python venv + bytecode for eval/ (RAGAS, Phoenix embedding export —
+# a separate toolchain from the Node app, see observability plan)
+/eval/.venv
+__pycache__/
+*.pyc
+
 
 CLAUDE.md
 .claude

@@ -34,13 +34,13 @@ const randomDays = (count: number) => {
 // 0-2 range the zod schema types them as. Same approximation as
 // fillFakeMeasurement() in that same file.
 export const randomOnboardingPayload = (): OnBoardingSchema => {
-  const sessionPerWeek = randomInt(2, 6)
+  // const sessionPerWeek = randomInt(2, 6)
 
   return {
-    sessionPerWeek,
-    dayAvailable: randomDays(randomInt(sessionPerWeek, 7)),
-    objective: pick(OBJECTIVES),
-    programPreferences: pick(PROGRAM_PREFERENCES),
+    sessionPerWeek: 3,
+    dayAvailable: [2, 3, 5] /* randomDays(randomInt(sessionPerWeek, 7)) */,
+    objective: 'gain' /* pick(OBJECTIVES) */,
+    programPreferences: 'push-pull-legs' /* pick(PROGRAM_PREFERENCES) */,
     arm: randomFloat(0.8, 1.1),
     leg: randomFloat(260, 340),
     torso: randomFloat(120, 180),

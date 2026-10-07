@@ -5,6 +5,8 @@ const STACK = [
   'Prisma',
   'TensorFlow.js',
   'LangChain',
+  'Langfuse',
+  'RAGAS',
 ]
 
 export function TechStackSection() {

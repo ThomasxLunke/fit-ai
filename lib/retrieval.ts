@@ -87,33 +87,33 @@ export function buildTopicQueries(
       k: 4,
     },
     {
-      tag: 'dos',
-      text: 'exercices pour le dos (tirage, rowing, dorsaux)',
+      tag: 'dos-grand_ronds-infra_épineux-petit_rond-rhomboïde-trapèzes',
+      text: 'exercices pour le dos (dorsaux, grand ronds,infra épineux, petit rond, rhomboïde, trapèzes)',
       k: 6,
     },
     {
-      tag: 'dos-morphologie',
-      text: `influence de la longueur des membres et des proportions osseuses sur le choix des exercices de dos, risques de blessure (${torsoLegInterpretation})`,
+      tag: 'dos-grand_ronds-infra_épineux-petit_rond-rhomboïde-trapèzes-morphologie',
+      text: `influence de la longueur des membres et des proportions osseuses sur le choix des exercices de dos (dorsaux, grand ronds,infra épineux, petit rond, rhomboïde, trapèzes), risques de blessure (${torsoLegInterpretation})`,
       k: 4,
     },
     {
-      tag: 'jambes',
+      tag: 'jambes-quadriceps-ischio-jambiers-mollet-fessier',
       text: 'exercices pour les jambes (quadriceps, ischio-jambiers, fessiers, mollets)',
       k: 6,
     },
     {
-      tag: 'jambes-morphologie',
-      text: `influence de la longueur du fémur et des proportions des jambes sur le choix des exercices de jambes (squat, presse), risques de blessure au genou (${torsoLegInterpretation})`,
+      tag: 'jambes-quadriceps-ischio-jambiers-mollet-fessier-morphologie',
+      text: `influence de la longueur du fémur et des proportions des jambes sur le choix des exercices de jambes (squat, presse), risques de blessure au genou (quadriceps, ischio-jambiers, fessiers, mollets)(${torsoLegInterpretation})`,
       k: 4,
     },
     {
-      tag: 'epaules',
-      text: 'exercices pour les épaules (développé militaire, élévations)',
+      tag: 'epaules-deltoïdes',
+      text: 'exercices pour les épaules ou deltoïdes (développé militaire, élévations)',
       k: 6,
     },
     {
-      tag: 'epaules-morphologie',
-      text: "influence de la morphologie de l'épaule (largeur, mobilité articulaire) sur le choix des exercices d'épaules, risques de blessure",
+      tag: 'epaules-deltoïdes-morphologie',
+      text: "influence de la morphologie de l'épaule/deltoïdes (largeur, mobilité articulaire) sur le choix des exercices d'épaules, risques de blessure",
       k: 4,
     },
     {
@@ -200,10 +200,7 @@ export async function retrieveBookChunks(
       const byTag = new Map(results)
       retriever.update({
         output: {
-          totalChunks: Array.from(byTag.values()).reduce(
-            (sum, chunks) => sum + chunks.length,
-            0,
-          ),
+          totalChunks: Array.from(byTag.values()),
         },
       })
       return byTag
@@ -249,9 +246,9 @@ export function mergeChunksWithinBudget(
 
 const MUSCLE_GROUP_ORDER = [
   'pectoraux',
-  'dos',
-  'jambes',
-  'epaules',
+  'dos-grand_ronds-infra_épineux-petit_rond-rhomboïde-trapèzes',
+  'jambes-quadriceps-ischio-jambiers-mollet-fessier',
+  'epaules-deltoïdes',
   'bras',
   'abdominaux',
   'structure',
