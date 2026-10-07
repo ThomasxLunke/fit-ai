@@ -12,6 +12,7 @@ import { loadEnv } from './load-env'
 loadEnv()
 
 import { generateProgram } from '../lib/ai'
+import { shutdownObservability } from '../lib/observability'
 import type { OnBoardingSchema } from '../components/onboarding-form'
 
 const payload: OnBoardingSchema = {
@@ -39,6 +40,8 @@ async function main() {
       console.log(`      extrait: ${ex.justification.source.excerpt}`)
     }
   }
+
+  await shutdownObservability()
 }
 
 main().catch((err) => {

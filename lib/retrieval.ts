@@ -1,4 +1,5 @@
 import { OpenAIEmbeddings } from '@langchain/openai'
+import { startActiveObservation } from '@langfuse/tracing'
 import type { OnBoardingSchema } from '@/components/onboarding-form'
 import vectorDb from './vector-db'
 
@@ -150,13 +151,37 @@ function toVectorLiteral(vector: number[]): string {
 export async function retrieveBookChunks(
   queries: TopicQuery[],
 ): Promise<Map<string, RetrievedChunk[]>> {
-  const embeddings = new OpenAIEmbeddings({ model: EMBEDDING_MODEL })
-  const vectors = await embeddings.embedDocuments(queries.map((q) => q.text))
+  return startActiveObservation(
+    'retrieve-book-chunks',
+    async (retriever) => {
+      retriever.update({ input: { tags: queries.map((q) => q.tag) } })
 
-  const results = await Promise.all(
-    queries.map(async (query, i) => {
-      const vectorLiteral = toVectorLiteral(vectors[i])
-      const rows = await vectorDb.$queryRaw<RawRow[]>`
+      // embedDocuments() has no callbacks/config param (unlike chat model
+      // .invoke()), so this can't be traced via LangChain's callback
+      // system — a manual embedding-type span instead.
+      const vectors = await startActiveObservation(
+        'embed-topic-queries',
+        async (embedding) => {
+          embedding.update({
+            model: EMBEDDING_MODEL,
+            input: queries.map((q) => q.text),
+          })
+          const embeddings = new OpenAIEmbeddings({ model: EMBEDDING_MODEL })
+          const result = await embeddings.embedDocuments(
+            queries.map((q) => q.text),
+          )
+          embedding.update({
+            output: { count: result.length, dimensions: result[0]?.length },
+          })
+          return result
+        },
+        { asType: 'embedding' },
+      )
+
+      const results = await Promise.all(
+        queries.map(async (query, i) => {
+          const vectorLiteral = toVectorLiteral(vectors[i])
+          const rows = await vectorDb.$queryRaw<RawRow[]>`
         SELECT id, book, "chunkIndex", content, tokens,
                embedding <=> ${vectorLiteral}::vector AS distance
         FROM "BookChunk"
@@ -164,14 +189,27 @@ export async function retrieveBookChunks(
         ORDER BY embedding <=> ${vectorLiteral}::vector
         LIMIT ${query.k}
       `
-      const chunks: RetrievedChunk[] = rows.map((row) => ({
-        ...row,
-        tag: query.tag,
-      }))
-      return [query.tag, chunks] as const
-    }),
+          const chunks: RetrievedChunk[] = rows.map((row) => ({
+            ...row,
+            tag: query.tag,
+          }))
+          return [query.tag, chunks] as const
+        }),
+      )
+
+      const byTag = new Map(results)
+      retriever.update({
+        output: {
+          totalChunks: Array.from(byTag.values()).reduce(
+            (sum, chunks) => sum + chunks.length,
+            0,
+          ),
+        },
+      })
+      return byTag
+    },
+    { asType: 'retriever' },
   )
-  return new Map(results)
 }
 
 // Round-robins across tags (one chunk per tag per pass, skipping ids

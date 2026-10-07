@@ -1,0 +1,19 @@
+services:
+  langfuse-worker:
+    environment:
+      NEXTAUTH_URL: http://localhost:3001
+  postgres:
+    ports: !override
+      - 127.0.0.1:5433:5432
+  redis:
+    ports: !override
+      - 127.0.0.1:6380:6379
+  langfuse-web:
+    ports: !override
+      - 3001:3000
+    environment:
+      NEXTAUTH_URL: http://localhost:3001
+  minio:
+    ports: !override
+      - 9190:9000
+      - 127.0.0.1:9191:9001

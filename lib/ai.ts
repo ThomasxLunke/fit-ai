@@ -14,10 +14,21 @@ import {
   interpretForearmRatio,
   interpretTorsoLegRatio,
 } from './morphology-interpretation'
+import {
+  initObservability,
+  getLangfuseHandler,
+  getLangfuseClient,
+} from './observability'
 
 const CONTEXT_TOKEN_BUDGET = 12000
 
 export const generateProgram = async (onBoarding: OnBoardingSchema) => {
+  // Must happen before retrieveBookChunks() — its manual spans need the
+  // OTel tracer provider already registered, and getLangfuseHandler()'s
+  // lazy init only runs later when building the model.invoke() options,
+  // which is too late for them.
+  initObservability()
+
   const torsoLegRatio = onBoarding.torso / onBoarding.leg
   const forearmInterpretation = interpretForearmRatio(onBoarding.arm)
   const torsoLegInterpretation = interpretTorsoLegRatio(torsoLegRatio)
@@ -31,36 +42,18 @@ export const generateProgram = async (onBoarding: OnBoardingSchema) => {
   const chunks = mergeChunksWithinBudget(byTag, CONTEXT_TOKEN_BUDGET)
   const contextText = formatContextForPrompt(chunks)
 
-  const promptTemplate = PromptTemplate.fromTemplate(`
-Tu es un coach expert en biomécanique, morphoanatomie et optimisation des leviers articulaires.
-
-Voici l'interprétation des données morphoanatomiques de l'utilisateur (mesures caméra, à traiter comme une indication directionnelle) :
-- Avant-bras vs bras : {forearmInterpretation} (ratio bras/avant-bras mesuré : {shoulderElbowToElbowWristRatio})
-- Buste vs jambes : {torsoLegInterpretation} (ratio buste/jambes mesuré : {torsoLegRatio})
-
-Objectif de l'utilisateur : {objective} son poids.
-
-Jours d'entraînement disponibles : {dayAvailable}
-Nombre de séances par semaine : {sessionPerWeek}
-
-Préférences de l'utilisateur pour la programmation : {programPreferences}
-
-Voici un contexte extrait d’ouvrages spécialisés :
-{context}
-
-Consignes impératives :
-1. Le champ "description" du programme doit commencer par une ou deux phrases en langage clair (pas les ratios bruts) qui expliquent à l'utilisateur ces deux interprétations morphologiques et ce qu'elles impliquent pour son entraînement.
-2. Le contexte ci-dessous étiquette chaque extrait par groupe musculaire et par type : "description exercice" ou "morphologie/blessure". Pour chaque exercice, s'il existe dans le contexte un extrait "morphologie/blessure" du MÊME groupe musculaire, tu DOIS baser "justification.reason" et "source.excerpt" sur CET extrait (pas sur l'extrait "description exercice") : reformule concrètement le fait qu'il rapporte (longueur de membre, angle articulaire, proportion, risque de blessure précis) et relie-le explicitement à l'interprétation morphologique de l'utilisateur donnée plus haut. N'utilise un extrait "description exercice" comme source que si aucun extrait "morphologie/blessure" pertinent n'existe pour ce groupe musculaire dans le contexte. Interdiction absolue des formules creuses et interchangeables d'un utilisateur à l'autre ("adapté à la morphologie de l'utilisateur", "important/crucial/essentiel pour l'utilisateur", "morphologie proportionnée" utilisé seul sans mécanisme concret) : chaque "reason" doit rester incompréhensible si on la copie-colle sur un autre utilisateur avec une morphologie différente. N'utilise aucun exercice qui ne conviendrait pas à la morphologie indiquée.
-3. La répartition des séances et le choix des exercices par séance doivent respecter les préférences de programmation, le nombre de séances et les jours disponibles, tout en restant cohérents avec la morphologie.
-4. Chaque séance doit compter entre 4 et 6 exercices : vise plutôt 6 pour une séance "full-body" ou "half-body" qui couvre plusieurs groupes musculaires à la fois, plutôt 4 pour une séance ciblée (split, PPL) centrée sur un ou deux groupes. N'invente jamais un exercice non justifiable par le contexte ci-dessus uniquement pour atteindre ce nombre — s'il n'y a pas assez de matière pertinente dans le contexte pour un groupe musculaire donné, reste en dessous de la fourchette plutôt que d'inventer.
-5. Si le contexte fourni contient des exemples de séances ou de semaines-type, appuie-toi sur leur format (nombre d'exercices par séance, fréquence hebdomadaire d'un même groupe musculaire) comme référence de structure — sans copier des exercices inadaptés à la morphologie de l'utilisateur.
-6. Pour "justification.source.book", indique exactement l'un des noms de livre apparaissant dans un en-tête "[Source : ...]" du contexte ci-dessus. Pour "source.excerpt", cite un court passage du chunk correspondant.
-
-Respecte strictement le schéma suivant :
-→ programme {{ name, description, trainingSessions: [ {{ name, description, day, exercises: [ {{ name, description, sets, reps, weight, justification: {{ reason, source: {{ book, excerpt }} }} }} ] }} ] }}
-
-Sois concis mais exhaustif dans les descriptions des mouvements.
-  `)
+  // Fetched live from Langfuse's prompt registry (seeded by
+  // scripts/push-prompt-to-langfuse.ts) instead of an inline template —
+  // the prompt is production data, editable from Langfuse's UI without a
+  // code deploy. No local fallback on purpose: if Langfuse is
+  // unreachable this should fail loudly, not silently mask whether the
+  // integration actually works.
+  const langfusePrompt = await getLangfuseClient().prompt.get(
+    'program-generation',
+  )
+  const promptTemplate = PromptTemplate.fromTemplate(
+    langfusePrompt.getLangchainPrompt(),
+  )
 
   const prompt = await promptTemplate.format({
     sessionPerWeek: onBoarding.sessionPerWeek,
@@ -78,7 +71,10 @@ Sois concis mais exhaustif dans les descriptions des mouvements.
     model: 'gpt-6-sol',
   }).withStructuredOutput(schemaProgram)
 
-  const result = await model.invoke([{ role: 'user', content: prompt }])
+  const result = await model.invoke([{ role: 'user', content: prompt }], {
+    callbacks: [getLangfuseHandler()],
+    tags: [onBoarding.programPreferences],
+  })
 
   // The model sometimes quotes a real retrieved excerpt correctly but
   // attributes it to the wrong book (observed: an excerpt verbatim from
