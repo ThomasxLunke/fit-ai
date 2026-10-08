@@ -11,6 +11,7 @@ import { ThemeToggleButton } from './theme-toggle-button'
 import { CtaAction } from './cta-action'
 import { SignOutButton } from './sign-out-button'
 import { DevRandomOnboardingButton } from './dev-random-onboarding-button'
+import { DevRandomOnboardingAgenticButton } from './dev-random-onboarding-agentic-button'
 import { landingFontVariables } from './fonts'
 import type { LandingCta } from './cta'
 
@@ -48,6 +49,7 @@ export function SiteHeader({
         <div className="lg-header-actions lg-header-actions-desktop">
           <ThemeToggleButton />
           <DevRandomOnboardingButton isLoggedIn={isLoggedIn} />
+          <DevRandomOnboardingAgenticButton isLoggedIn={isLoggedIn} />
           {isLoggedIn && <SignOutButton />}
           {cta.secondary && (
             <CtaAction className="lg-btn lg-btn-ghost" link={cta.secondary} />
@@ -119,6 +121,7 @@ export function SiteHeader({
                 )}
                 {isLoggedIn && <SignOutButton />}
                 <DevRandomOnboardingButton isLoggedIn={isLoggedIn} />
+                <DevRandomOnboardingAgenticButton isLoggedIn={isLoggedIn} />
               </div>
             </div>
           </SheetContent>

@@ -1,9 +1,16 @@
-import { OpenAIEmbeddings } from '@langchain/openai'
+import { ChatOpenAI, OpenAIEmbeddings } from '@langchain/openai'
 import { startActiveObservation } from '@langfuse/tracing'
+import { z } from 'zod'
 import type { OnBoardingSchema } from '@/components/onboarding-form'
 import vectorDb from './vector-db'
+import { getLangfuseHandler } from './observability'
 
 const EMBEDDING_MODEL = 'text-embedding-3-small'
+const JUDGE_MODEL = 'gpt-4o-mini'
+
+// Below this, a tag's retrieval is judged insufficient — see
+// judgeTopicSufficiency() and retrieveBookChunksAgentic().
+const SUFFICIENCY_THRESHOLD = 0.6
 
 export interface RetrievedChunk {
   id: number
@@ -148,40 +155,39 @@ function toVectorLiteral(vector: number[]): string {
   return `[${vector.join(',')}]`
 }
 
-export async function retrieveBookChunks(
+// Embeds every query's text in one batched call and runs the matching
+// top-k pgvector search per tag. Shared by the classic retrieveBookChunks()
+// (called once) and retrieveBookChunksAgentic() (called again, on just the
+// subset of tags that got a reformulated query, for its optional 2nd tour).
+async function searchTags(
   queries: TopicQuery[],
 ): Promise<Map<string, RetrievedChunk[]>> {
-  return startActiveObservation(
-    'retrieve-book-chunks',
-    async (retriever) => {
-      retriever.update({ input: { tags: queries.map((q) => q.tag) } })
-
-      // embedDocuments() has no callbacks/config param (unlike chat model
-      // .invoke()), so this can't be traced via LangChain's callback
-      // system — a manual embedding-type span instead.
-      const vectors = await startActiveObservation(
-        'embed-topic-queries',
-        async (embedding) => {
-          embedding.update({
-            model: EMBEDDING_MODEL,
-            input: queries.map((q) => q.text),
-          })
-          const embeddings = new OpenAIEmbeddings({ model: EMBEDDING_MODEL })
-          const result = await embeddings.embedDocuments(
-            queries.map((q) => q.text),
-          )
-          embedding.update({
-            output: { count: result.length, dimensions: result[0]?.length },
-          })
-          return result
-        },
-        { asType: 'embedding' },
+  // embedDocuments() has no callbacks/config param (unlike chat model
+  // .invoke()), so this can't be traced via LangChain's callback system —
+  // a manual embedding-type span instead.
+  const vectors = await startActiveObservation(
+    'embed-topic-queries',
+    async (embedding) => {
+      embedding.update({
+        model: EMBEDDING_MODEL,
+        input: queries.map((q) => q.text),
+      })
+      const embeddings = new OpenAIEmbeddings({ model: EMBEDDING_MODEL })
+      const result = await embeddings.embedDocuments(
+        queries.map((q) => q.text),
       )
+      embedding.update({
+        output: { count: result.length, dimensions: result[0]?.length },
+      })
+      return result
+    },
+    { asType: 'embedding' },
+  )
 
-      const results = await Promise.all(
-        queries.map(async (query, i) => {
-          const vectorLiteral = toVectorLiteral(vectors[i])
-          const rows = await vectorDb.$queryRaw<RawRow[]>`
+  const results = await Promise.all(
+    queries.map(async (query, i) => {
+      const vectorLiteral = toVectorLiteral(vectors[i])
+      const rows = await vectorDb.$queryRaw<RawRow[]>`
         SELECT id, book, "chunkIndex", content, tokens,
                embedding <=> ${vectorLiteral}::vector AS distance
         FROM "BookChunk"
@@ -189,21 +195,175 @@ export async function retrieveBookChunks(
         ORDER BY embedding <=> ${vectorLiteral}::vector
         LIMIT ${query.k}
       `
-          const chunks: RetrievedChunk[] = rows.map((row) => ({
-            ...row,
-            tag: query.tag,
-          }))
-          return [query.tag, chunks] as const
-        }),
-      )
+      const chunks: RetrievedChunk[] = rows.map((row) => ({
+        ...row,
+        tag: query.tag,
+      }))
+      return [query.tag, chunks] as const
+    }),
+  )
 
-      const byTag = new Map(results)
+  return new Map(results)
+}
+
+export async function retrieveBookChunks(
+  queries: TopicQuery[],
+): Promise<Map<string, RetrievedChunk[]>> {
+  return startActiveObservation(
+    'retrieve-book-chunks',
+    async (retriever) => {
+      retriever.update({ input: { tags: queries.map((q) => q.tag) } })
+      const byTag = await searchTags(queries)
       retriever.update({
         output: {
           totalChunks: Array.from(byTag.values()),
         },
       })
       return byTag
+    },
+    { asType: 'retriever' },
+  )
+}
+
+// Judges whether a tag's retrieved chunks contain enough concrete material
+// (limb length, joint angle, specific injury risk — the same bar as the
+// generation prompt's own instruction 2, see
+// scripts/push-prompt-to-langfuse.ts) to ground a non-generic justification.
+// Always proposes a rewrittenQuery when the score is low, but doesn't know
+// how many tours have already run — that decision belongs to the caller.
+async function judgeTopicSufficiency(
+  query: TopicQuery,
+  chunks: RetrievedChunk[],
+): Promise<{ score: number; reason: string; rewrittenQuery: string | null }> {
+  const judgeSchema = z.object({
+    score: z.number().min(0).max(1),
+    reason: z.string(),
+    rewrittenQuery: z.string().nullable(),
+  })
+  const judge = new ChatOpenAI({ model: JUDGE_MODEL }).withStructuredOutput(
+    judgeSchema,
+  )
+
+  return judge.invoke(
+    [
+      {
+        role: 'user',
+        content: `Requête de retrieval : "${query.text}"\n\nExtraits retrouvés :\n${chunks.map((c) => c.content).join('\n\n')}\n\nNote de 0 à 1 à quel point ces extraits contiennent de la matière concrète (longueur de membre, angle articulaire, proportion, risque de blessure précis) suffisante pour écrire une justification spécifique et non générique en lien avec cette requête — une justification qui resterait incompréhensible si on la copiait-collait sur une autre requête. Si la note est inférieure à ${SUFFICIENCY_THRESHOLD}, propose aussi une reformulation de cette requête qui pourrait trouver de meilleurs extraits (sinon, rewrittenQuery doit être null).`,
+      },
+    ],
+    { callbacks: [getLangfuseHandler()] },
+  )
+}
+
+// Merges a 2nd tour's results into a tag's existing chunks: union by id
+// (keeping the smaller distance on a duplicate — the same chunk can be
+// found again under a different query), re-sorted by distance (a valid
+// absolute scale even across two different queries) and truncated back to
+// k. The 2nd tour can only replace the 1st tour's weakest entries with
+// better ones, never shrink or grow the final count.
+function mergeTourResults(
+  previous: RetrievedChunk[],
+  found: RetrievedChunk[],
+  k: number,
+): RetrievedChunk[] {
+  const byId = new Map<number, RetrievedChunk>()
+  for (const chunk of [...previous, ...found]) {
+    const existing = byId.get(chunk.id)
+    if (!existing || chunk.distance < existing.distance) {
+      byId.set(chunk.id, chunk)
+    }
+  }
+  return Array.from(byId.values())
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, k)
+}
+
+export interface TopicScore {
+  tag: string
+  score: number
+  tours: number
+  reason: string
+}
+
+// Agentic variant of retrieveBookChunks(): after the 1st tour, a judge
+// scores each tag's chunks; tags scoring below SUFFICIENCY_THRESHOLD get a
+// 2nd tour with a reformulated query (see judgeTopicSufficiency() and
+// mergeTourResults()), capped at 2 tours total. topicScores lets callers
+// (lib/ai.ts's generateProgramAgentic(), and the dev UI) show which tags
+// stayed under-documented even after a retry.
+export async function retrieveBookChunksAgentic(
+  queries: TopicQuery[],
+): Promise<{
+  byTag: Map<string, RetrievedChunk[]>
+  topicScores: TopicScore[]
+}> {
+  return startActiveObservation(
+    'retrieve-book-chunks-agentic',
+    async (retriever) => {
+      retriever.update({ input: { tags: queries.map((q) => q.tag) } })
+
+      const byTag = await searchTags(queries)
+      const verdicts = new Map(
+        await Promise.all(
+          queries.map(
+            async (query) =>
+              [
+                query.tag,
+                await judgeTopicSufficiency(query, byTag.get(query.tag) ?? []),
+              ] as const,
+          ),
+        ),
+      )
+      const tours = new Map(queries.map((query) => [query.tag, 1]))
+
+      const needsSecondTour = queries.filter((query) => {
+        const verdict = verdicts.get(query.tag)!
+        return verdict.score < SUFFICIENCY_THRESHOLD && verdict.rewrittenQuery
+      })
+
+      if (needsSecondTour.length > 0) {
+        const rewrittenQueries = needsSecondTour.map((query) => ({
+          ...query,
+          text: verdicts.get(query.tag)!.rewrittenQuery!,
+        }))
+        const secondTourResults = await searchTags(rewrittenQueries)
+
+        for (const query of needsSecondTour) {
+          byTag.set(
+            query.tag,
+            mergeTourResults(
+              byTag.get(query.tag) ?? [],
+              secondTourResults.get(query.tag) ?? [],
+              query.k,
+            ),
+          )
+          tours.set(query.tag, 2)
+        }
+
+        const secondVerdicts = await Promise.all(
+          needsSecondTour.map(
+            async (query) =>
+              [
+                query.tag,
+                await judgeTopicSufficiency(query, byTag.get(query.tag)!),
+              ] as const,
+          ),
+        )
+        for (const [tag, verdict] of secondVerdicts) verdicts.set(tag, verdict)
+      }
+
+      const topicScores: TopicScore[] = queries.map((query) => {
+        const verdict = verdicts.get(query.tag)!
+        return {
+          tag: query.tag,
+          score: verdict.score,
+          tours: tours.get(query.tag)!,
+          reason: verdict.reason,
+        }
+      })
+
+      retriever.update({ output: { topicScores } })
+      return { byTag, topicScores }
     },
     { asType: 'retriever' },
   )

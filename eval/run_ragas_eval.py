@@ -1,18 +1,29 @@
-"""Run with: eval/.venv/Scripts/python.exe eval/run_ragas_eval.py --run-id <id>
+"""Run with: eval/.venv/Scripts/python.exe eval/run_ragas_eval.py --run-id <id> --target <exercise|topic> [<exercise|topic> ...]
 
-Pulls the "exercise-justification-<run-id>" observations written by
-lib/ai.ts's generateProgram() for ONE specific run (one span per exercise,
-shaped as {question, contexts, answer} — see the comment there for why
-RAGAS is evaluated per-exercise rather than per-program), scores each with
-RAGAS's reference-free metrics, and writes the scores back onto the
-matching Langfuse observation via create_score() — so they show up in
-Langfuse's UI attached to the exact span that produced them.
+Pulls Langfuse observations written by lib/ai.ts's generateProgram() for
+ONE specific run, scores each with RAGAS's reference-free metrics, and
+writes the scores back onto the matching Langfuse observation via
+create_score() — so they show up in Langfuse's UI attached to the exact
+span that produced them.
+
+Two independent observation families can be evaluated, selected via
+--target (both at once is supported — each gets its own averages block and
+its own score write-back):
+  - "exercise": "exercise-justification-<run-id>" spans, one per generated
+    exercise, question reconstructed after generation (see lib/ai.ts).
+  - "topic": "topic-retrieval-<run-id>" spans, one per retrieval tag (see
+    lib/retrieval.ts's buildTopicQueries()) — scores the actual query that
+    drove retrieval, rather than a question rebuilt after the fact. Only
+    present when generateProgram() was called with evalMode: true (see
+    scripts/test-generate-program.ts).
+Both are shaped identically, {question, contexts, answer}, which is why one
+fetch/evaluate/write-back pipeline (run_eval() below) serves both.
 
 --run-id is required (not optional, no silent default): generateProgram()
-tags every exercise span it creates with a run id (random unless the
-caller passes one — see scripts/test-generate-program.ts's --run-id flag),
-so a run id scopes evaluation to one specific generation instead of every
-exercise-justification span ever created across every test run. Run
+tags every span it creates with a run id (random unless the caller passes
+one — see scripts/test-generate-program.ts's --run-id flag), so a run id
+scopes evaluation to one specific generation instead of every span of that
+family ever created across every test run. Run
 scripts/test-generate-program.ts first and copy the "Run id: ..." it
 prints.
 
@@ -50,11 +61,18 @@ JUDGE_MODEL = "gpt-4o-mini"  # cheaper than the gpt-6-sol generation model —
 # scoring against a rubric is a simpler task than the citation-fidelity/
 # instruction-following generation task that specifically required gpt-6-sol.
 
+# Both observation families lib/ai.ts's generateProgram() writes, keyed by
+# the --target value that selects them. See this file's docstring.
+SPAN_NAME_PREFIX_BY_TARGET = {
+    "exercise": "exercise-justification",
+    "topic": "topic-retrieval",
+}
+
 # .env lives at the repo root, one level up from eval/.
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 
-def fetch_exercise_justification_observations(run_id: str) -> list[dict]:
+def fetch_observations(run_id: str, span_name: str) -> list[dict]:
     base_url = os.environ["LANGFUSE_BASE_URL"]
     auth = (os.environ["LANGFUSE_PUBLIC_KEY"], os.environ["LANGFUSE_SECRET_KEY"])
 
@@ -69,7 +87,7 @@ def fetch_exercise_justification_observations(run_id: str) -> list[dict]:
             f"{base_url}/api/public/v2/observations",
             auth=auth,
             params={
-                "name": f"exercise-justification-{run_id}",
+                "name": span_name,
                 "fields": "core,io,metadata",
                 "limit": page_size,
                 "page": page,
@@ -86,20 +104,10 @@ def fetch_exercise_justification_observations(run_id: str) -> list[dict]:
     return observations
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--run-id",
-        required=True,
-        help="Run id printed by scripts/test-generate-program.ts's "
-        '"Run id: ..." line — scopes evaluation to that one run.',
-    )
-    args = parser.parse_args()
-
-    langfuse = Langfuse()
-
-    raw_observations = fetch_exercise_justification_observations(args.run_id)
-    print(f"Found {len(raw_observations)} exercise-justification observations for run {args.run_id}.")
+def run_eval(langfuse: Langfuse, run_id: str, target: str) -> None:
+    span_name = f"{SPAN_NAME_PREFIX_BY_TARGET[target]}-{run_id}"
+    raw_observations = fetch_observations(run_id, span_name)
+    print(f"\n[{target}] Found {len(raw_observations)} observations ({span_name}).")
     if not raw_observations:
         return
 
@@ -125,11 +133,11 @@ def main() -> None:
     df = result.to_pandas()
 
     metric_names = [m.name for m in metrics]
-    print("\n=== Averages ===")
+    print(f"=== {target} — Averages ===")
     for name in metric_names:
         print(f"  {name}: {df[name].mean():.3f}")
 
-    print("\nWriting scores back to Langfuse...")
+    print(f"Writing {target} scores back to Langfuse...")
     for obs, (_, row) in zip(raw_observations, df.iterrows()):
         for name in metric_names:
             langfuse.create_score(
@@ -138,8 +146,32 @@ def main() -> None:
                 trace_id=obs["traceId"],
                 observation_id=obs["id"],
             )
-    langfuse.flush()
     print(f"Done. Attached {len(metric_names)} scores to {len(raw_observations)} observations.")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--run-id",
+        required=True,
+        help="Run id printed by scripts/test-generate-program.ts's "
+        '"Run id: ..." line — scopes evaluation to that one run.',
+    )
+    parser.add_argument(
+        "--target",
+        nargs="+",
+        choices=sorted(SPAN_NAME_PREFIX_BY_TARGET),
+        required=True,
+        help="Which observation family to evaluate — 'exercise', 'topic', "
+        "or both ('--target exercise topic') to run them one after the "
+        "other in this same invocation.",
+    )
+    args = parser.parse_args()
+
+    langfuse = Langfuse()
+    for target in args.target:
+        run_eval(langfuse, args.run_id, target)
+    langfuse.flush()
 
 
 if __name__ == "__main__":

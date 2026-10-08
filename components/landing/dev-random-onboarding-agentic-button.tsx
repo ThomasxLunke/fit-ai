@@ -5,11 +5,12 @@ import { useRouter } from 'next/navigation'
 import { randomOnboardingPayload } from '@/lib/dev-onboarding'
 import { setOnboardingPayload } from '@/lib/onboarding-storage'
 
-// Dev-only shortcut: skips the onboarding wizard (random values instead of
-// filling it by hand, including the camera-measurement steps) and jumps
-// straight to /dashboard's generation loader, reusing whichever account is
-// currently signed in — no need to create a fresh account for every test run.
-export function DevRandomOnboardingButton({
+// Sibling of DevRandomOnboardingButton — same dev-only shortcut, but routes
+// through generateProgramAgentic() (lib/ai.ts's judge-and-retry retrieval
+// loop) instead of the classic generateProgram(), via the `mode=agentic`
+// param app/(dashboard)/dashboard/page.tsx reads to choose which loader to
+// render.
+export function DevRandomOnboardingAgenticButton({
   isLoggedIn,
 }: {
   isLoggedIn: boolean
@@ -27,10 +28,10 @@ export function DevRandomOnboardingButton({
       onClick={() => {
         setIsLoading(true)
         setOnboardingPayload(randomOnboardingPayload())
-        router.push('/dashboard?generating=1')
+        router.push('/dashboard?generating=1&mode=agentic')
       }}
     >
-      🧪 Classique RAG
+      🧪 Agentique RAG
     </button>
   )
 }

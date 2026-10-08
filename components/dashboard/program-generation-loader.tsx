@@ -3,12 +3,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getUserBySessionAuth } from '@/app/actions'
-import { generateProgram } from '@/lib/ai'
+import { generateProgram, generateProgramAgentic } from '@/lib/ai'
 import { createProgramOnBoarding, updateUser } from '@/lib/api'
 import {
   getOnboardingPayload,
   clearOnboardingPayload,
 } from '@/lib/onboarding-storage'
+import type { TopicScore } from '@/lib/retrieval'
+import { TopicScoresPanel } from './topic-scores-panel'
 
 const STATUS_MESSAGES = [
   'Récupération de vos mesures…',
@@ -29,11 +31,19 @@ const FUN_FACTS = [
   'Squat, développé couché et soulevé de terre restent efficaces sur toutes les morphologies — mais jamais avec la même technique optimale.',
 ]
 
-export function ProgramGenerationLoader() {
+export function ProgramGenerationLoader({
+  agentic = false,
+}: {
+  agentic?: boolean
+}) {
   const router = useRouter()
   const [statusIndex, setStatusIndex] = useState(0)
   const [factIndex, setFactIndex] = useState(0)
   const [error, setError] = useState('')
+  // Only ever set in agentic mode — ephemeral, nothing persisted. Its
+  // presence is what holds the screen on the scores panel instead of
+  // redirecting straight to /dashboard like the classic mode does.
+  const [topicScores, setTopicScores] = useState<TopicScore[] | null>(null)
   const hasStarted = useRef(false)
 
   const runGeneration = async () => {
@@ -48,7 +58,17 @@ export function ProgramGenerationLoader() {
 
     try {
       const user = await getUserBySessionAuth()
-      const program = await generateProgram(payload)
+
+      let program
+      let scores: TopicScore[] | null = null
+      if (agentic) {
+        const result = await generateProgramAgentic(payload)
+        scores = result.topicScores
+        program = result
+      } else {
+        program = await generateProgram(payload)
+      }
+
       await createProgramOnBoarding(user.id, program)
       // Strip the included `program` relation before sending: the PATCH
       // route forwards this object as-is to prisma.user.update({ data }),
@@ -59,7 +79,12 @@ export function ProgramGenerationLoader() {
       const { program: _currentProgram, ...userScalars } = user
       await updateUser(user.id, { ...userScalars, onboarded: true })
       clearOnboardingPayload()
-      router.replace('/dashboard')
+
+      // Classic mode redirects immediately. Agentic mode holds the screen
+      // on the scores panel instead — the program is already saved, only
+      // the redirect waits for "Continuer".
+      if (scores) setTopicScores(scores)
+      else router.replace('/dashboard')
     } catch (err) {
       console.error(err)
       setError(
@@ -76,20 +101,20 @@ export function ProgramGenerationLoader() {
   }, [])
 
   useEffect(() => {
-    if (error) return
+    if (error || topicScores) return
     const id = setInterval(() => {
       setStatusIndex((i) => (i + 1) % STATUS_MESSAGES.length)
     }, 6000)
     return () => clearInterval(id)
-  }, [error])
+  }, [error, topicScores])
 
   useEffect(() => {
-    if (error) return
+    if (error || topicScores) return
     const id = setInterval(() => {
       setFactIndex((i) => (i + 1) % FUN_FACTS.length)
     }, 9000)
     return () => clearInterval(id)
-  }, [error])
+  }, [error, topicScores])
 
   return (
     <div className="lg-wrap lg-generation">
@@ -108,6 +133,18 @@ export function ProgramGenerationLoader() {
               Réessayer
             </button>
           </>
+        ) : topicScores ? (
+          <>
+            <h1>Qualité du retrieval par tag</h1>
+            <TopicScoresPanel topicScores={topicScores} />
+            <button
+              type="button"
+              className="lg-btn lg-btn-primary"
+              onClick={() => router.replace('/dashboard')}
+            >
+              Continuer
+            </button>
+          </>
         ) : (
           <>
             <h1>Génération de votre programme</h1>
@@ -121,7 +158,7 @@ export function ProgramGenerationLoader() {
         )}
       </div>
 
-      {!error && (
+      {!error && !topicScores && (
         <div className="lg-panel lg-fact-panel">
           <span className="lg-br" />
           <div className="lg-eyebrow">le saviez-vous ?</div>
