@@ -50,27 +50,6 @@ const PROGRAM_PREFERENCE_LABELS: Record<
   none: 'Aucune préférence',
 }
 
-// A fixed muscle-group taxonomy, independent of programPreferences — every
-// split (PPL, half-body, full-body, split, or none) ends up needing chest,
-// back, legs, shoulders, arms and core exercises on some day, so basing the
-// query set on programPreferences instead would risk under-covering
-// whichever groups don't map cleanly onto the chosen split name.
-//
-// Each muscle group has a companion "-morphologie" query alongside its
-// exercise query. The corpus genuinely contains morphology-influence
-// passages (limb length, bone proportions, injury risk — protected
-// verbatim during cleaning, see lib/context-cleanup.ts's second content
-// category), but a single generic query detached from any muscle group
-// never linked that content to the specific exercise being justified —
-// the model had a "dos" chunk and an unrelated generic "morphologie"
-// chunk, nothing connecting the two, so justification.reason fell back on
-// vague boilerplate ("morphologie qui favorise un bon équilibre") instead
-// of citing something real. Pairing each muscle group with its own
-// morphology/injury-risk query gives the model an actual grounded passage
-// for that specific muscle group. This also folds in what a dedicated
-// `securite` tag used to cover ("Blessures en musculation et sports de
-// force") — if that book stops showing up in scripts/test-retrieval.ts
-// output, widen these queries' k rather than reintroducing a standalone tag.
 export function buildTopicQueries(
   onBoarding: OnBoardingSchema,
   forearmInterpretation: string,
@@ -155,16 +134,9 @@ function toVectorLiteral(vector: number[]): string {
   return `[${vector.join(',')}]`
 }
 
-// Embeds every query's text in one batched call and runs the matching
-// top-k pgvector search per tag. Shared by the classic retrieveBookChunks()
-// (called once) and retrieveBookChunksAgentic() (called again, on just the
-// subset of tags that got a reformulated query, for its optional 2nd tour).
 async function searchTags(
   queries: TopicQuery[],
 ): Promise<Map<string, RetrievedChunk[]>> {
-  // embedDocuments() has no callbacks/config param (unlike chat model
-  // .invoke()), so this can't be traced via LangChain's callback system —
-  // a manual embedding-type span instead.
   const vectors = await startActiveObservation(
     'embed-topic-queries',
     async (embedding) => {
@@ -173,9 +145,7 @@ async function searchTags(
         input: queries.map((q) => q.text),
       })
       const embeddings = new OpenAIEmbeddings({ model: EMBEDDING_MODEL })
-      const result = await embeddings.embedDocuments(
-        queries.map((q) => q.text),
-      )
+      const result = await embeddings.embedDocuments(queries.map((q) => q.text))
       embedding.update({
         output: { count: result.length, dimensions: result[0]?.length },
       })
@@ -225,12 +195,6 @@ export async function retrieveBookChunks(
   )
 }
 
-// Judges whether a tag's retrieved chunks contain enough concrete material
-// (limb length, joint angle, specific injury risk — the same bar as the
-// generation prompt's own instruction 2, see
-// scripts/push-prompt-to-langfuse.ts) to ground a non-generic justification.
-// Always proposes a rewrittenQuery when the score is low, but doesn't know
-// how many tours have already run — that decision belongs to the caller.
 async function judgeTopicSufficiency(
   query: TopicQuery,
   chunks: RetrievedChunk[],
@@ -255,12 +219,6 @@ async function judgeTopicSufficiency(
   )
 }
 
-// Merges a 2nd tour's results into a tag's existing chunks: union by id
-// (keeping the smaller distance on a duplicate — the same chunk can be
-// found again under a different query), re-sorted by distance (a valid
-// absolute scale even across two different queries) and truncated back to
-// k. The 2nd tour can only replace the 1st tour's weakest entries with
-// better ones, never shrink or grow the final count.
 function mergeTourResults(
   previous: RetrievedChunk[],
   found: RetrievedChunk[],
@@ -285,12 +243,6 @@ export interface TopicScore {
   reason: string
 }
 
-// Agentic variant of retrieveBookChunks(): after the 1st tour, a judge
-// scores each tag's chunks; tags scoring below SUFFICIENCY_THRESHOLD get a
-// 2nd tour with a reformulated query (see judgeTopicSufficiency() and
-// mergeTourResults()), capped at 2 tours total. topicScores lets callers
-// (lib/ai.ts's generateProgramAgentic(), and the dev UI) show which tags
-// stayed under-documented even after a retry.
 export async function retrieveBookChunksAgentic(
   queries: TopicQuery[],
 ): Promise<{
@@ -341,7 +293,7 @@ export async function retrieveBookChunksAgentic(
         }
 
         const secondVerdicts = await Promise.all(
-          needsSecondTour.map(
+          rewrittenQueries.map(
             async (query) =>
               [
                 query.tag,
@@ -369,12 +321,6 @@ export async function retrieveBookChunksAgentic(
   )
 }
 
-// Round-robins across tags (one chunk per tag per pass, skipping ids
-// already included via another tag) rather than a flat sort by distance —
-// a flat sort would let a tag with unusually distinctive vocabulary (e.g.
-// "dos-morphologie") dominate the budget and crowd out muscle groups whose
-// chunks score less extremely but are just as necessary for a complete
-// program.
 export function mergeChunksWithinBudget(
   byTag: Map<string, RetrievedChunk[]>,
   tokenBudget: number,
@@ -424,14 +370,6 @@ function categoryLabel(tag: string): string {
   return 'description exercice'
 }
 
-// Groups chunks by muscle group (an exercise chunk next to its
-// morphology/injury companion) instead of mergeChunksWithinBudget's
-// round-robin insertion order — that order is about fair SELECTION under
-// budget, this is about presentation. Putting each muscle group's two
-// chunk types next to each other, explicitly labeled, is what lets the
-// prompt (lib/ai.ts) instruct the model to prefer the morphologie/blessure
-// extract over the generic exercise one when both exist for the same
-// group, instead of leaving it to pick whichever comes first.
 export function formatContextForPrompt(chunks: RetrievedChunk[]): string {
   const sorted = [...chunks].sort((a, b) => {
     const orderA = MUSCLE_GROUP_ORDER.indexOf(baseTag(a.tag))

@@ -35,7 +35,7 @@ const payload: OnBoardingSchema = {
   sessionPerWeek: 3,
   dayAvailable: [2, 4, 5],
   objective: 'gain',
-  programPreferences: 'push-pull-legs',
+  programPreferences: 'split',
   arm: 0.95,
   leg: 0.6,
   torso: 0.3,
@@ -66,8 +66,6 @@ function printProgram(program: Awaited<ReturnType<typeof generateProgram>>) {
 async function main() {
   const runId = parseRunId()
   const agentic = process.argv.includes('--agentic')
-  console.log(`Run id: ${runId}`)
-  console.log(`Mode: ${agentic ? 'agentic' : 'classic'}`)
 
   console.log('Generating program...')
   if (agentic) {

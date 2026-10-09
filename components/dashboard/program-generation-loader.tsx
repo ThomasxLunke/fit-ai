@@ -40,9 +40,7 @@ export function ProgramGenerationLoader({
   const [statusIndex, setStatusIndex] = useState(0)
   const [factIndex, setFactIndex] = useState(0)
   const [error, setError] = useState('')
-  // Only ever set in agentic mode — ephemeral, nothing persisted. Its
-  // presence is what holds the screen on the scores panel instead of
-  // redirecting straight to /dashboard like the classic mode does.
+
   const [topicScores, setTopicScores] = useState<TopicScore[] | null>(null)
   const hasStarted = useRef(false)
 
@@ -50,8 +48,6 @@ export function ProgramGenerationLoader({
     setError('')
     const payload = getOnboardingPayload()
     if (!payload) {
-      // Nothing to generate (direct visit, or already consumed) — re-evaluate
-      // the page normally instead of showing a loader forever.
       router.replace('/dashboard')
       return
     }
@@ -70,19 +66,11 @@ export function ProgramGenerationLoader({
       }
 
       await createProgramOnBoarding(user.id, program)
-      // Strip the included `program` relation before sending: the PATCH
-      // route forwards this object as-is to prisma.user.update({ data }),
-      // which rejects a raw relation value there (it expects nested-write
-      // syntax like `connect`/`disconnect`, not the plain object `include`
-      // gives us) — only the scalar fields need updating anyway.
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { program: _currentProgram, ...userScalars } = user
       await updateUser(user.id, { ...userScalars, onboarded: true })
       clearOnboardingPayload()
 
-      // Classic mode redirects immediately. Agentic mode holds the screen
-      // on the scores panel instead — the program is already saved, only
-      // the redirect waits for "Continuer".
       if (scores) setTopicScores(scores)
       else router.replace('/dashboard')
     } catch (err) {

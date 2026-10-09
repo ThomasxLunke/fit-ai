@@ -84,11 +84,6 @@ function buildOnboardingContext(
   }
 }
 
-// Shared tail of both generation modes: prompt building, the real gpt-6-sol
-// call, book re-attribution, and the exercise-justification spans. Takes
-// `byTag` as a parameter rather than retrieving it itself, since
-// generateProgram() and generateProgramAgentic() differ only in which
-// retrieval function produced it.
 async function buildAndRunGeneration(
   onBoarding: OnBoardingSchema,
   context: OnboardingContext,
@@ -166,25 +161,9 @@ async function buildAndRunGeneration(
 
 export const generateProgram = async (
   onBoarding: OnBoardingSchema,
-  // Lets a caller (scripts/test-generate-program.ts) tag every exercise
-  // span from this call with a shared, known id, so eval/run_ragas_eval.py
-  // can evaluate one specific run instead of every exercise-justification
-  // span ever created. The live app never passes one — it gets a random
-  // id each time, which is fine since production runs aren't looked up by
-  // id.
   runId: string = crypto.randomUUID(),
-  // Opt-in only — costs ~13 extra LLM calls
-  // (recordTopicRetrievalObservations above), and generateProgram() is
-  // also the real user-facing path
-  // (components/dashboard/program-generation-loader.tsx, reused as-is by
-  // the dev-random-onboarding button): neither should pay for eval-only
-  // calls, so only scripts/test-generate-program.ts passes true.
   evalMode: boolean = false,
 ) => {
-  // Must happen before retrieveBookChunks() — its manual spans need the
-  // OTel tracer provider already registered, and getLangfuseHandler()'s
-  // lazy init only runs later when building the model.invoke() options,
-  // which is too late for them.
   initObservability()
 
   const context = buildOnboardingContext(onBoarding)
@@ -192,12 +171,6 @@ export const generateProgram = async (
   return buildAndRunGeneration(onBoarding, context, byTag, runId, evalMode)
 }
 
-// Agentic variant: retrieveBookChunksAgentic() lets a judge grade each
-// tag's retrieval and retry once with a reformulated query before
-// generation even starts (see lib/retrieval.ts). Returns the program
-// spread together with topicScores so the dev UI can show which tags
-// stayed under-documented even after a retry — see
-// components/dashboard/program-generation-loader.tsx.
 export const generateProgramAgentic = async (
   onBoarding: OnBoardingSchema,
   runId: string = crypto.randomUUID(),
