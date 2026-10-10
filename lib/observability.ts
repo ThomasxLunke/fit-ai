@@ -1,6 +1,9 @@
 import { LangfuseSpanProcessor } from '@langfuse/otel'
 import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node'
-import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base'
+import {
+  BatchSpanProcessor,
+  type SpanProcessor,
+} from '@opentelemetry/sdk-trace-base'
 import { OTLPTraceExporter } from '@arizeai/phoenix-otel'
 import { CallbackHandler } from '@langfuse/langchain'
 import { LangfuseClient } from '@langfuse/client'
@@ -21,17 +24,30 @@ export const langfuseSpanProcessor = new LangfuseSpanProcessor()
 // lib/retrieval.ts) exports to Phoenix too, with no second instrumentation
 // pass. Phoenix's local Docker container exposes OTLP/HTTP on 6006 (the
 // same port as its UI) at the standard /v1/traces path.
-const phoenixSpanProcessor = new BatchSpanProcessor(
-  new OTLPTraceExporter({ url: 'http://localhost:6006/v1/traces' }),
-)
+//
+// No Phoenix instance is deployed anywhere public yet, so defaulting to
+// localhost in production would just make every span export silently fail
+// against a port nothing is listening on. Outside production, keep
+// today's zero-config default; in production, only add the processor if
+// PHOENIX_OTLP_URL is actually set.
+const phoenixUrl =
+  process.env.PHOENIX_OTLP_URL ??
+  (process.env.NODE_ENV === 'production'
+    ? undefined
+    : 'http://localhost:6006/v1/traces')
+
+const spanProcessors: SpanProcessor[] = [langfuseSpanProcessor]
+if (phoenixUrl) {
+  spanProcessors.push(
+    new BatchSpanProcessor(new OTLPTraceExporter({ url: phoenixUrl })),
+  )
+}
 
 let initialized = false
 export function initObservability(): void {
   if (initialized) return
   initialized = true
-  new NodeTracerProvider({
-    spanProcessors: [langfuseSpanProcessor, phoenixSpanProcessor],
-  }).register()
+  new NodeTracerProvider({ spanProcessors }).register()
 }
 
 let handler: CallbackHandler | undefined
@@ -56,8 +72,5 @@ export function getLangfuseClient(): LangfuseClient {
 // @langfuse/otel's README: "Spans still buffered when the process exits
 // are lost").
 export async function shutdownObservability(): Promise<void> {
-  await Promise.all([
-    langfuseSpanProcessor.forceFlush(),
-    phoenixSpanProcessor.forceFlush(),
-  ])
+  await Promise.all(spanProcessors.map((processor) => processor.forceFlush()))
 }

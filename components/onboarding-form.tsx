@@ -305,8 +305,7 @@ export default function OnboardingForm() {
 
   const { setValue } = form
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
+  const submitOnboarding = (mode?: 'agentic') => {
     const payload: OnBoardingSchema = {
       ...form.getValues(),
       arm: average(measurementArm),
@@ -314,7 +313,16 @@ export default function OnboardingForm() {
       torso: average(measurementTorso),
     }
     setOnboardingPayload(payload)
-    router.push('/dashboard?generating=1')
+    router.push(
+      mode === 'agentic'
+        ? '/dashboard?generating=1&mode=agentic'
+        : '/dashboard?generating=1',
+    )
+  }
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    submitOnboarding()
   }
 
   const objectives = [
@@ -570,6 +578,21 @@ export default function OnboardingForm() {
                   <Button type="submit">
                     <Check />
                     Valider
+                  </Button>
+                </div>
+
+                <div className="flex flex-col items-center gap-2 border-t pt-4 sm:flex-row sm:justify-between">
+                  <p className="text-sm text-muted-foreground">
+                    Ou essaie notre génération expérimentale, qui vérifie et
+                    retente la recherche documentaire avant de répondre.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full sm:w-auto"
+                    onClick={() => submitOnboarding('agentic')}
+                  >
+                    Continuer vers l&apos;onboarding agentique
                   </Button>
                 </div>
               </div>
