@@ -129,6 +129,7 @@ model BookChunk {
   content    String
   tokens     Int
   embedding  Unsupported("vector(1536)")?
+  contentTsv Unsupported("tsvector")?
   createdAt  DateTime @default(now())
 
   @@index([book])

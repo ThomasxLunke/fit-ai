@@ -13,6 +13,7 @@ import {
   formatContextForPrompt,
   type TopicQuery,
   type RetrievedChunk,
+  type RetrievalMode,
 } from './retrieval'
 import {
   interpretForearmRatio,
@@ -163,11 +164,12 @@ export const generateProgram = async (
   onBoarding: OnBoardingSchema,
   runId: string = crypto.randomUUID(),
   evalMode: boolean = false,
+  retrievalMode: RetrievalMode = 'dense',
 ) => {
   initObservability()
 
   const context = buildOnboardingContext(onBoarding)
-  const byTag = await retrieveBookChunks(context.topicQueries)
+  const byTag = await retrieveBookChunks(context.topicQueries, retrievalMode)
   return buildAndRunGeneration(onBoarding, context, byTag, runId, evalMode)
 }
 
@@ -175,12 +177,14 @@ export const generateProgramAgentic = async (
   onBoarding: OnBoardingSchema,
   runId: string = crypto.randomUUID(),
   evalMode: boolean = false,
+  retrievalMode: RetrievalMode = 'dense',
 ) => {
   initObservability()
 
   const context = buildOnboardingContext(onBoarding)
   const { byTag, topicScores } = await retrieveBookChunksAgentic(
     context.topicQueries,
+    retrievalMode,
   )
   const result = await buildAndRunGeneration(
     onBoarding,

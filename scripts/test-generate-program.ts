@@ -1,4 +1,4 @@
-// Run with: npx tsx scripts/test-generate-program.ts [--run-id <id>] [--agentic]
+// Run with: npx tsx scripts/test-generate-program.ts [--run-id <id>] [--agentic] [--hybrid]
 //
 // One real end-to-end call to generateProgram() (lib/ai.ts) with a sample
 // onboarding payload — triggers real retrieval + a real gpt-4o-mini call
@@ -18,6 +18,13 @@
 // retrieveBookChunksAgentic()). Lets the two modes be compared on the same
 // --run-id workflow: generate once with --agentic and once without, then
 // run eval/run_ragas_eval.py --target topic against each run id.
+//
+// --hybrid forces retrievalMode: 'hybrid' (dense + full-text + Cohere
+// rerank — see lib/retrieval.ts) instead of the default 'dense' (bi-encoder
+// only, pre-Phase 7 behavior — kept as the default because Cohere bills per
+// call and a run fires 13-26 of them). Lets dense vs hybrid be compared the
+// same way: generate once with --hybrid and once without, same --run-id
+// workflow, then eval/run_ragas_eval.py --target topic against each run id.
 //
 // Always runs with evalMode: true (see lib/ai.ts) — on top of the real
 // generation call, this also fires one extra gpt-4o-mini call per retrieval
@@ -66,13 +73,15 @@ function printProgram(program: Awaited<ReturnType<typeof generateProgram>>) {
 async function main() {
   const runId = parseRunId()
   const agentic = process.argv.includes('--agentic')
+  const retrievalMode = process.argv.includes('--hybrid') ? 'hybrid' : 'dense'
 
-  console.log('Generating program...')
+  console.log(`Generating program (retrieval: ${retrievalMode})...`)
   if (agentic) {
     const { topicScores, ...program } = await generateProgramAgentic(
       payload,
       runId,
       true,
+      retrievalMode,
     )
     printProgram(program)
 
@@ -82,7 +91,7 @@ async function main() {
       console.log(`    ${reason}`)
     }
   } else {
-    printProgram(await generateProgram(payload, runId, true))
+    printProgram(await generateProgram(payload, runId, true, retrievalMode))
   }
 
   await shutdownObservability()

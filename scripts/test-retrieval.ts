@@ -1,11 +1,16 @@
-// Run with: npx tsx scripts/test-retrieval.ts
+// Run with: npx tsx scripts/test-retrieval.ts [--hybrid]
 //
-// Sanity-checks the multi-query pgvector retrieval (lib/retrieval.ts)
-// against a few representative onboarding payloads, without ever calling
-// the generation LLM — only embedding calls (negligible cost). Prints
-// per-tag results (book, chunk index, distance) and the merged token
-// count, so retrieval quality can be eyeballed before wiring it into
-// lib/ai.ts's generateProgram().
+// Sanity-checks the multi-query retrieval (lib/retrieval.ts) against a few
+// representative onboarding payloads, without ever calling the generation
+// LLM. Prints per-tag results (book, chunk index, distance, relevance
+// score) and the merged token count, so retrieval quality can be eyeballed
+// before wiring it into lib/ai.ts's generateProgram().
+//
+// Default mode is 'dense' (bi-encoder only, embedding calls only,
+// negligible cost). --hybrid forces dense + full-text + Cohere rerank (see
+// retrieveBookChunks()'s mode parameter) — real, if small, added embedding
+// + rerank API cost (Cohere bills per call, kept opt-in rather than
+// default).
 
 import { loadEnv } from './load-env'
 
@@ -86,6 +91,9 @@ const samples: { label: string; payload: OnBoardingSchema }[] = [
 ]
 
 async function main() {
+  const retrievalMode = process.argv.includes('--hybrid') ? 'hybrid' : 'dense'
+  console.log(`Retrieval mode: ${retrievalMode}`)
+
   for (const sample of samples) {
     console.log(`\n=== ${sample.label} ===`)
 
@@ -98,13 +106,13 @@ async function main() {
       forearmInterpretation,
       torsoLegInterpretation,
     )
-    const byTag = await retrieveBookChunks(queries)
+    const byTag = await retrieveBookChunks(queries, retrievalMode)
 
     for (const [tag, chunks] of byTag) {
       console.log(`  [${tag}]`)
       for (const chunk of chunks) {
         console.log(
-          `    ${chunk.book} #${chunk.chunkIndex} (distance=${chunk.distance.toFixed(3)}, tokens=${chunk.tokens})`,
+          `    ${chunk.book} #${chunk.chunkIndex} (distance=${chunk.distance.toFixed(3)}, relevance=${chunk.relevanceScore.toFixed(3)}, tokens=${chunk.tokens})`,
         )
       }
     }

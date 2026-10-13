@@ -67,10 +67,16 @@ export function getLangfuseClient(): LangfuseClient {
   return client
 }
 
-// tsx scripts are short-lived and exit right after their one real call —
-// without an explicit flush, buffered spans never reach Langfuse (see
-// @langfuse/otel's README: "Spans still buffered when the process exits
-// are lost").
 export async function shutdownObservability(): Promise<void> {
-  await Promise.all(spanProcessors.map((processor) => processor.forceFlush()))
+  const results = await Promise.allSettled(
+    spanProcessors.map((processor) => processor.forceFlush()),
+  )
+  for (const result of results) {
+    if (result.status === 'rejected') {
+      console.warn(
+        'Observability span processor failed to flush:',
+        result.reason,
+      )
+    }
+  }
 }

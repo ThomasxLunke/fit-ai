@@ -1,5 +1,6 @@
 import { ChatOpenAI, OpenAIEmbeddings } from '@langchain/openai'
 import { startActiveObservation } from '@langfuse/tracing'
+import { CohereClient } from 'cohere-ai'
 import { z } from 'zod'
 import type { OnBoardingSchema } from '@/components/onboarding-form'
 import vectorDb from './vector-db'
@@ -7,10 +8,16 @@ import { getLangfuseHandler } from './observability'
 
 const EMBEDDING_MODEL = 'text-embedding-3-small'
 const JUDGE_MODEL = 'gpt-4o-mini'
+const RERANK_MODEL = 'rerank-v3.5'
 
-// Below this, a tag's retrieval is judged insufficient — see
-// judgeTopicSufficiency() and retrieveBookChunksAgentic().
+const SHORTLIST_MULTIPLIER = 5
+const SHORTLIST_MIN = 25
+
+const RRF_K = 60
+
 const SUFFICIENCY_THRESHOLD = 0.6
+
+export type RetrievalMode = 'dense' | 'hybrid'
 
 export interface RetrievedChunk {
   id: number
@@ -19,6 +26,7 @@ export interface RetrievedChunk {
   content: string
   tokens: number
   distance: number
+  relevanceScore: number
   tag: string
 }
 
@@ -37,8 +45,25 @@ interface RawRow {
   distance: number
 }
 
-// Local copy of components/onboarding-form.tsx's `programs` labels: that
-// file is a 'use client' component and can't be imported from here.
+interface SparseRow {
+  id: number
+  book: string
+  chunkIndex: number
+  content: string
+  tokens: number
+  score: number
+}
+
+interface FusedCandidate {
+  id: number
+  book: string
+  chunkIndex: number
+  content: string
+  tokens: number
+  distance: number | null
+  rrfScore: number
+}
+
 const PROGRAM_PREFERENCE_LABELS: Record<
   OnBoardingSchema['programPreferences'],
   string
@@ -134,10 +159,8 @@ function toVectorLiteral(vector: number[]): string {
   return `[${vector.join(',')}]`
 }
 
-async function searchTags(
-  queries: TopicQuery[],
-): Promise<Map<string, RetrievedChunk[]>> {
-  const vectors = await startActiveObservation(
+async function embedQueries(queries: TopicQuery[]): Promise<number[][]> {
+  return startActiveObservation(
     'embed-topic-queries',
     async (embedding) => {
       embedding.update({
@@ -153,37 +176,195 @@ async function searchTags(
     },
     { asType: 'embedding' },
   )
+}
 
+// Recherche dense (bi-encoder)
+async function searchDense(
+  queries: TopicQuery[],
+  vectors: number[][],
+  limitFor: (query: TopicQuery) => number,
+): Promise<Map<string, RawRow[]>> {
   const results = await Promise.all(
     queries.map(async (query, i) => {
       const vectorLiteral = toVectorLiteral(vectors[i])
+      const limit = limitFor(query)
       const rows = await vectorDb.$queryRaw<RawRow[]>`
         SELECT id, book, "chunkIndex", content, tokens,
                embedding <=> ${vectorLiteral}::vector AS distance
         FROM "BookChunk"
         WHERE embedding IS NOT NULL
         ORDER BY embedding <=> ${vectorLiteral}::vector
-        LIMIT ${query.k}
+        LIMIT ${limit}
       `
-      const chunks: RetrievedChunk[] = rows.map((row) => ({
-        ...row,
-        tag: query.tag,
-      }))
-      return [query.tag, chunks] as const
+      return [query.tag, rows] as const
     }),
   )
+  return new Map(results)
+}
 
+// Recherche sparse/lexicale (famille BM25/TF-IDF) via la recherche
+// full-text native de Postgres
+async function searchSparse(
+  queries: TopicQuery[],
+  limitFor: (query: TopicQuery) => number,
+): Promise<Map<string, SparseRow[]>> {
+  const results = await Promise.all(
+    queries.map(async (query) => {
+      const limit = limitFor(query)
+      const rows = await vectorDb.$queryRaw<SparseRow[]>`
+        SELECT id, book, "chunkIndex", content, tokens,
+               ts_rank_cd("contentTsv", plainto_tsquery('french', ${query.text})) AS score
+        FROM "BookChunk"
+        WHERE "contentTsv" @@ plainto_tsquery('french', ${query.text})
+        ORDER BY score DESC
+        LIMIT ${limit}
+      `
+      return [query.tag, rows] as const
+    }),
+  )
+  return new Map(results)
+}
+
+// Reciprocal Rank Fusion
+function fuseRrf(dense: RawRow[], sparse: SparseRow[]): FusedCandidate[] {
+  const byId = new Map<number, FusedCandidate>()
+
+  dense.forEach((row, index) => {
+    byId.set(row.id, {
+      id: row.id,
+      book: row.book,
+      chunkIndex: row.chunkIndex,
+      content: row.content,
+      tokens: row.tokens,
+      distance: row.distance,
+      rrfScore: 1 / (RRF_K + index + 1),
+    })
+  })
+
+  sparse.forEach((row, index) => {
+    const contribution = 1 / (RRF_K + index + 1)
+    const existing = byId.get(row.id)
+    if (existing) {
+      existing.rrfScore += contribution
+    } else {
+      byId.set(row.id, {
+        id: row.id,
+        book: row.book,
+        chunkIndex: row.chunkIndex,
+        content: row.content,
+        tokens: row.tokens,
+        distance: null,
+        rrfScore: contribution,
+      })
+    }
+  })
+
+  return Array.from(byId.values()).sort((a, b) => b.rrfScore - a.rrfScore)
+}
+
+let cohereClient: CohereClient | undefined
+function getCohereClient(): CohereClient {
+  if (!cohereClient)
+    cohereClient = new CohereClient({
+      token: process.env.COHERE_API_KEY,
+      maxRetries: 5,
+    })
+  return cohereClient
+}
+
+// Cross-encoder : requête + chunk encodés ensemble
+async function rerankChunks(
+  tag: string,
+  queryText: string,
+  candidates: FusedCandidate[],
+  k: number,
+): Promise<RetrievedChunk[]> {
+  if (candidates.length === 0) return []
+
+  return startActiveObservation(
+    'rerank-chunks',
+    async (span) => {
+      span.update({
+        input: { tag, query: queryText, candidateCount: candidates.length },
+      })
+      const response = await getCohereClient().rerank({
+        model: RERANK_MODEL,
+        query: queryText,
+        documents: candidates.map((candidate) => candidate.content),
+        topN: k,
+      })
+      const chunks: RetrievedChunk[] = response.results.map((result) => {
+        const candidate = candidates[result.index]
+        return {
+          id: candidate.id,
+          book: candidate.book,
+          chunkIndex: candidate.chunkIndex,
+          content: candidate.content,
+          tokens: candidate.tokens,
+          distance: candidate.distance ?? 1 - result.relevanceScore,
+          relevanceScore: result.relevanceScore,
+          tag,
+        }
+      })
+      span.update({ output: { count: chunks.length } })
+      return chunks
+    },
+    { asType: 'tool' },
+  )
+}
+
+async function searchTags(
+  queries: TopicQuery[],
+  mode: RetrievalMode = 'hybrid',
+): Promise<Map<string, RetrievedChunk[]>> {
+  const shortlistSize = (query: TopicQuery) =>
+    mode === 'dense'
+      ? query.k
+      : Math.max(query.k * SHORTLIST_MULTIPLIER, SHORTLIST_MIN)
+
+  const [vectors, sparseByTag] = await Promise.all([
+    embedQueries(queries),
+    mode === 'hybrid'
+      ? searchSparse(queries, shortlistSize)
+      : Promise.resolve(new Map<string, SparseRow[]>()),
+  ])
+  const denseByTag = await searchDense(queries, vectors, shortlistSize)
+
+  if (mode === 'dense') {
+    return new Map(
+      queries.map((query) => {
+        const rows = denseByTag.get(query.tag) ?? []
+        const chunks: RetrievedChunk[] = rows.map((row) => ({
+          ...row,
+          relevanceScore: 1 - row.distance,
+          tag: query.tag,
+        }))
+        return [query.tag, chunks] as const
+      }),
+    )
+  }
+
+  const results: (readonly [string, RetrievedChunk[]])[] = []
+  for (const query of queries) {
+    const fused = fuseRrf(
+      denseByTag.get(query.tag) ?? [],
+      sparseByTag.get(query.tag) ?? [],
+    )
+    const reranked = await rerankChunks(query.tag, query.text, fused, query.k)
+    results.push([query.tag, reranked] as const)
+  }
   return new Map(results)
 }
 
 export async function retrieveBookChunks(
   queries: TopicQuery[],
+  mode: RetrievalMode = 'dense',
 ): Promise<Map<string, RetrievedChunk[]>> {
   return startActiveObservation(
     'retrieve-book-chunks',
     async (retriever) => {
-      retriever.update({ input: { tags: queries.map((q) => q.tag) } })
-      const byTag = await searchTags(queries)
+      retriever.update({ input: { tags: queries.map((q) => q.tag), mode } })
+      const byTag = await searchTags(queries, mode)
       retriever.update({
         output: {
           totalChunks: Array.from(byTag.values()),
@@ -227,12 +408,12 @@ function mergeTourResults(
   const byId = new Map<number, RetrievedChunk>()
   for (const chunk of [...previous, ...found]) {
     const existing = byId.get(chunk.id)
-    if (!existing || chunk.distance < existing.distance) {
+    if (!existing || chunk.relevanceScore > existing.relevanceScore) {
       byId.set(chunk.id, chunk)
     }
   }
   return Array.from(byId.values())
-    .sort((a, b) => a.distance - b.distance)
+    .sort((a, b) => b.relevanceScore - a.relevanceScore)
     .slice(0, k)
 }
 
@@ -245,6 +426,7 @@ export interface TopicScore {
 
 export async function retrieveBookChunksAgentic(
   queries: TopicQuery[],
+  mode: RetrievalMode = 'dense',
 ): Promise<{
   byTag: Map<string, RetrievedChunk[]>
   topicScores: TopicScore[]
@@ -252,9 +434,9 @@ export async function retrieveBookChunksAgentic(
   return startActiveObservation(
     'retrieve-book-chunks-agentic',
     async (retriever) => {
-      retriever.update({ input: { tags: queries.map((q) => q.tag) } })
+      retriever.update({ input: { tags: queries.map((q) => q.tag), mode } })
 
-      const byTag = await searchTags(queries)
+      const byTag = await searchTags(queries, mode)
       const verdicts = new Map(
         await Promise.all(
           queries.map(
@@ -278,7 +460,7 @@ export async function retrieveBookChunksAgentic(
           ...query,
           text: verdicts.get(query.tag)!.rewrittenQuery!,
         }))
-        const secondTourResults = await searchTags(rewrittenQueries)
+        const secondTourResults = await searchTags(rewrittenQueries, mode)
 
         for (const query of needsSecondTour) {
           byTag.set(
