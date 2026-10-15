@@ -1,0 +1,14 @@
+{
+  "pectoraux": {
+    "question": "exercices pour les pectoraux (développé, écarté, poussée horizontale)",
+    "reference": "Pour développer les pectoraux, les mouvements de poussée horizontale comme le développé couché et les écartés sollicitent principalement le grand pectoral ; varier les angles (incliné, décliné) permet de cibler différemment les fibres claviculaires et sternales du muscle."
+  },
+  "bras-morphologie": {
+    "question": "influence de la morphologie osseuse du coude et de la longueur de l'avant-bras sur le choix des exercices de bras (curl, extension), risques de blessure",
+    "reference": "Un avant-bras plus long augmente le bras de levier sur les curls et extensions, ce qui accroît la contrainte sur le coude et le poignet ; il est donc recommandé de privilégier des charges plus légères et des prises neutres ou des poignées indépendantes pour réduire le risque de blessure articulaire."
+  },
+  "structure": {
+    "question": "fréquence d'entraînement et structure de programme pour 3 séances par semaine en Split",
+    "reference": "Avec 3 séances par semaine en Split, chaque séance cible un groupe musculaire différent (par exemple haut du corps, bas du corps, puis un groupe spécifique), ce qui permet un volume suffisant par muscle tout en laissant un temps de récupération adéquat avant de resolliciter le même groupe."
+  }
+}

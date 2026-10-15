@@ -36,11 +36,25 @@ entreprise, et les plus probables en entretien technique.
   budget de tokens. Gain qualité souvent le plus simple à obtenir, jamais
   exploré ici. *Implémenté 2026-10-13 : Cohere Rerank (`rerank-v3.5`),
   `retrievalMode: 'dense' | 'hybrid'` conservé pour comparaison A/B.*
-- [ ] **Golden dataset + métriques avec référence** — construire à la main
+- [x] **Golden dataset + métriques avec référence** — construire à la main
   un jeu de questions/réponses validées, puis mesurer Context Recall et
   Answer Correctness (RAGAS) en plus des 3 métriques sans référence déjà en
   place. Le vrai goulot d'étranglement en entreprise (effort humain de
-  labellisation), donc une compétence rare et valorisée.
+  labellisation), donc une compétence rare et valorisée. *Implémenté et
+  exécuté 2026-10-15 (`eval/golden_dataset.json`, `eval/run_ragas_eval.py
+  --target golden`, voir plan Phase 8) — volontairement réduit à 3 tags
+  (`pectoraux`, `bras-morphologie`, `structure`), juste pour pratiquer le
+  mécanisme une fois, pas pour produire un dataset réellement pertinent.
+  Les 3 réponses de référence ont été écrites par Claude (demande
+  explicite de l'utilisateur, qui a renoncé à l'exigence initiale de les
+  écrire lui-même — "je me fiche de ça, je veux que le système fonctionne
+  juste de bout en bout"), donc sans expertise réelle du corpus. Résultat
+  obtenu sur `run-id phase8-golden` : `context_recall` 1.0/0.5/0.5,
+  `answer_correctness` ~0.46-0.49 selon le tag. Leçon retenue : un
+  `context_recall` < 1 ne dit pas si c'est le retrieval qui a raté ou si
+  la référence contient une affirmation plausible mais absente du corpus
+  réel — ambiguïté qu'on ne peut lever qu'avec une vraie expertise du
+  contenu source, exactement le goulot d'étranglement annoncé plus haut.*
 - [ ] **Permission-aware / multi-tenant retrieval** — filtrer les documents
   accessibles selon les droits de l'utilisateur au moment du retrieval.
   Central dès qu'il y a plusieurs utilisateurs/plusieurs niveaux d'accès

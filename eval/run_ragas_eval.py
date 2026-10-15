@@ -1,4 +1,4 @@
-"""Run with: eval/.venv/Scripts/python.exe eval/run_ragas_eval.py --run-id <id> --target <exercise|topic> [<exercise|topic> ...]
+"""Run with: eval/.venv/Scripts/python.exe eval/run_ragas_eval.py --run-id <id> --target <exercise|topic|golden> [...]
 
 Pulls Langfuse observations written by lib/ai.ts's generateProgram() for
 ONE specific run, scores each with RAGAS's reference-free metrics, and
@@ -18,6 +18,16 @@ its own score write-back):
     scripts/test-generate-program.ts).
 Both are shaped identically, {question, contexts, answer}, which is why one
 fetch/evaluate/write-back pipeline (run_eval() below) serves both.
+
+A third, separate target:
+  - "golden": reuses the same "topic-retrieval-<run-id>" spans as "topic",
+    but only for the handful of tags that have a hand-written reference
+    answer in golden_dataset.json (see run_golden_eval() below) — scored
+    with RAGAS's reference-based metrics (LLMContextRecall,
+    AnswerCorrectness) instead of the reference-free ones, since a real
+    ground-truth answer is now available to compare against. Tags with no
+    reference yet (empty string in golden_dataset.json) are skipped with a
+    warning, not scored against an empty string.
 
 --run-id is required (not optional, no silent default): generateProgram()
 tags every span it creates with a run id (random unless the caller passes
@@ -52,21 +62,20 @@ from langfuse import Langfuse
 from ragas import EvaluationDataset, RunConfig, SingleTurnSample, evaluate
 from ragas.llms import LangchainLLMWrapper
 from ragas.metrics import (
+    AnswerCorrectness,
     Faithfulness,
     LLMContextPrecisionWithoutReference,
+    LLMContextRecall,
     ResponseRelevancy,
 )
 
-JUDGE_MODEL = "gpt-4o-mini"  # cheaper than the gpt-6-sol generation model —
-# scoring against a rubric is a simpler task than the citation-fidelity/
-# instruction-following generation task that specifically required gpt-6-sol.
-
-# Both observation families lib/ai.ts's generateProgram() writes, keyed by
-# the --target value that selects them. See this file's docstring.
+JUDGE_MODEL = "gpt-4o-mini" 
 SPAN_NAME_PREFIX_BY_TARGET = {
     "exercise": "exercise-justification",
     "topic": "topic-retrieval",
 }
+
+GOLDEN_DATASET_PATH = Path(__file__).resolve().parent / "golden_dataset.json"
 
 # .env lives at the repo root, one level up from eval/.
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
@@ -149,6 +158,78 @@ def run_eval(langfuse: Langfuse, run_id: str, target: str) -> None:
     print(f"Done. Attached {len(metric_names)} scores to {len(raw_observations)} observations.")
 
 
+def load_golden_dataset() -> dict:
+    with open(GOLDEN_DATASET_PATH, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def run_golden_eval(langfuse: Langfuse, run_id: str) -> None:
+    span_name = f"{SPAN_NAME_PREFIX_BY_TARGET['topic']}-{run_id}"
+    raw_observations = fetch_observations(run_id, span_name)
+    golden = load_golden_dataset()
+
+    matched_observations = []
+    samples = []
+    for obs in raw_observations:
+        tag = obs["metadata"].get("tag")
+        entry = golden.get(tag)
+        if not entry:
+            continue
+        reference = entry.get("reference", "")
+        if not reference:
+            print(f"[golden] Skipping tag '{tag}': no reference answer written yet "
+                  f"in {GOLDEN_DATASET_PATH.name}.")
+            continue
+
+        input_data = json.loads(obs["input"])
+        output_data = json.loads(obs["output"])
+        matched_observations.append(obs)
+        samples.append(
+            SingleTurnSample(
+                user_input=input_data["question"],
+                retrieved_contexts=input_data["contexts"],
+                response=output_data["answer"],
+                reference=reference,
+            )
+        )
+
+    print(f"\n[golden] Matched {len(samples)}/{len(golden)} golden tags "
+          f"({span_name}).")
+    if not samples:
+        return
+
+    dataset = EvaluationDataset(samples=samples)
+    judge_llm = LangchainLLMWrapper(ChatOpenAI(model=JUDGE_MODEL))
+
+    metrics = [LLMContextRecall(), AnswerCorrectness()]
+
+    run_config = RunConfig(timeout=600, max_workers=4)
+    result = evaluate(dataset=dataset, metrics=metrics, llm=judge_llm, run_config=run_config)
+    df = result.to_pandas()
+
+    metric_names = [m.name for m in metrics]
+    print("=== golden — Per-tag scores ===")
+    for obs, (_, row) in zip(matched_observations, df.iterrows()):
+        tag = obs["metadata"]["tag"]
+        scores = ", ".join(f"{name}={row[name]:.3f}" for name in metric_names)
+        print(f"  [{tag}] {scores}")
+
+    print("=== golden — Averages ===")
+    for name in metric_names:
+        print(f"  {name}: {df[name].mean():.3f}")
+
+    print("Writing golden scores back to Langfuse...")
+    for obs, (_, row) in zip(matched_observations, df.iterrows()):
+        for name in metric_names:
+            langfuse.create_score(
+                name=name,
+                value=float(row[name]),
+                trace_id=obs["traceId"],
+                observation_id=obs["id"],
+            )
+    print(f"Done. Attached {len(metric_names)} scores to {len(matched_observations)} observations.")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -160,17 +241,22 @@ def main() -> None:
     parser.add_argument(
         "--target",
         nargs="+",
-        choices=sorted(SPAN_NAME_PREFIX_BY_TARGET),
+        choices=sorted(SPAN_NAME_PREFIX_BY_TARGET) + ["golden"],
         required=True,
         help="Which observation family to evaluate — 'exercise', 'topic', "
-        "or both ('--target exercise topic') to run them one after the "
+        "'golden' (reference-based metrics on the few tags with a hand-"
+        "written answer in golden_dataset.json), or several at once "
+        "('--target exercise topic golden') to run them one after the "
         "other in this same invocation.",
     )
     args = parser.parse_args()
 
     langfuse = Langfuse()
     for target in args.target:
-        run_eval(langfuse, args.run_id, target)
+        if target == "golden":
+            run_golden_eval(langfuse, args.run_id)
+        else:
+            run_eval(langfuse, args.run_id, target)
     langfuse.flush()
 
 
